@@ -1,2 +1,2 @@
 # oncall-slackbot
-OnCall #slackbot PagerDuty combo
+OnCall slackbot

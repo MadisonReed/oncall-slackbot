@@ -1,0 +1,23 @@
+{
+  "author": "Madison Reed <eng@madison-reed.com>",
+  "name": "oncall-slackbot",
+  "description": "Pager Duty #slack bot",
+  "version": "0.0.1",
+  "private": true,
+  "engines": {
+    "node": "4.4.6",
+    "npm": "2.15.5"
+  },
+  "dependencies": {
+    "async": "2.1.2",
+    "config": "1.21.0",
+    "debug": "*",
+    "node-cache": "4.1.0",
+    "request": "2.34.0",
+    "underscore": "1.8.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/MadisonReed/oncall-slackbot.git"
+  }
+}
