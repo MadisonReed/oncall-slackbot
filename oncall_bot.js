@@ -152,7 +152,7 @@ bot.on('message', function (data) {
     botUser = '<@' + bot.self.id + '>';
     if (data.type == 'message') {
       botIndex = data.text.indexOf(botUser);
-      if (data.bot_id == undefined && botIndex >= -1) {
+      if (data.bot_id == undefined && botIndex >= 0) {
         getChannel(data.channel, function (channel) {
           if (data.text == botUser) {
             mentionOnCalls(channel.name, "get in here :point_up_2:");
