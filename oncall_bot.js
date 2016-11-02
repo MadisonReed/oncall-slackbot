@@ -150,7 +150,7 @@ bot.on('start', function() {
 bot.on('message', function(data) {
     // all ingoing events https://api.slack.com/rtm
     botUser = '<@'+bot.self.id+'>';
-    if(data.type == 'message' && data.text.indexOf(botUser) > -1) {
+    if(data.type == 'message' && data.text.indexOf(botUser) == 0) {
         getChannel(data.channel, function (channel) {
         if(data.text == botUser) {
           mentionOnCalls(channel.name, "get in here :point_up_2:");
