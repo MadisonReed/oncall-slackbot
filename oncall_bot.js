@@ -14,7 +14,7 @@ var SlackBot = require('slackbots');
 
 const NodeCache = require("node-cache");
 var cache = new NodeCache();
-var cacheInterval = 3600; // 1 hour
+var cacheInterval = 604800; // 1 hour
 
 var PagerDuty = require('./pagerduty.js');
 var pagerDuty = new PagerDuty(config.get('pagerduty'));
@@ -77,7 +77,13 @@ var cacheChannels = function (callback) {
 var getChannel = function (channelId, callback) {
   cache.get('channels', function (err, channelObj) {
     if (channelObj == undefined) {
-      cacheChannels(getChannel(channelId, callback));
+      async.series([
+        function(cb) {
+          cacheChannels(cb);
+        }
+      ], function(err, results) {
+        getChannel(channelId,callback);
+      });
     } else {
       var channel = _.find(channelObj.channels, function (channel) {
         return channel.id == channelId;
@@ -107,9 +113,14 @@ var cacheUsers = function (callback) {
 var getUser = function (email, callback) {
   cache.get('users', function (err, userObj) {
     if (userObj == undefined) {
-      cacheUsers(getUser(email, callback));
+      async.series([
+        function(cb) {
+          cacheUsers(cb);
+        }
+      ], function(err, results) {
+        getUser(email, callback);
+      })
     } else {
-
       var member = _.find(userObj.members, function (member) {
         return member.profile.email == email
       });

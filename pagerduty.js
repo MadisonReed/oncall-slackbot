@@ -15,7 +15,7 @@ var querystring = require('querystring');
 var debug = require('debug')('pagerduty');
 const NodeCache = require( "node-cache" );
 
-var cacheInterval = 300; // 5 minutes
+var cacheInterval = 604800; // 5 minutes
 
 /**
  * params object:
