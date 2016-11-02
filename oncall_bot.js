@@ -159,9 +159,9 @@ bot.on('message', function (data) {
           } else {
             preText = ' _<@' + data.user + '> said "';
             if(botIndex == 0) {
-              mentionOnCalls(channel.name, preText + data.text.substr(botIndex, botUser.length) + '_ "');
+              mentionOnCalls(channel.name, preText + data.text.substr(botUser.length+1) + '_"');
             } else {
-              mentionOnCalls(channel.name, preText + data.text + '_ "');
+              mentionOnCalls(channel.name, preText + data.text + '_"');
             }
           }
         });
