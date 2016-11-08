@@ -65,8 +65,18 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
     total = content.total;
 
     // Index the results as a map from id: item
+    if (options.sortBy) {
+      items.sort(function(a,b) {
+        return a[options.sortBy] - b[options.sortBy];
+      });
+    }
+
     _.each(items, function(item, i) {
-      items_map[item.id || item[options.secondaryIndex].id] = item;
+      index = item.id || item[options.secondaryIndex].id;
+      if(options.sortBy) {
+        index = item[options.sortBy] + '-' + index;
+      }
+      items_map[index] = item;
     });
 
     if (options.params.offset >= total) {
@@ -83,7 +93,7 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
     request(requestOptions, function (error, response, body) {
       if (!error && response.statusCode == 200) {
         pagedCallback(null, body);
-      } else {
+      } else {items
         pagedCallback(error);
       }
     });
@@ -93,7 +103,7 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
 };
 
 PagerDuty.prototype.getOnCalls = function (params, callback) {
-  var options = {contentIndex: "oncalls", secondaryIndex: 'user', uri: "/oncalls", callback: callback, params: params || oncallsParams };
+  var options = {contentIndex: "oncalls", secondaryIndex: 'user', sortBy: 'escalation_level', uri: "/oncalls", callback: callback, params: params || oncallsParams };
   var self = this;
   async.auto({
     getCacheData: function(cb) {
