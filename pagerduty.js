@@ -15,8 +15,6 @@ var querystring = require('querystring');
 var debug = require('debug')('pagerduty');
 const NodeCache = require( "node-cache" );
 
-var cacheInterval = 300; // 5 minutes
-
 /**
  * params object:
  *   domain: String (required)
@@ -29,6 +27,7 @@ var PagerDuty = function (options) {
   this.cache = new NodeCache();
   oncallsParams["schedule_ids[]"] = options.schedule_ids;
   this.token = options.pagerduty_token;
+  this.cacheInterval = options.cache_interval_seconds;
 };
 
 PagerDuty.prototype.getAllPaginatedData = function (options) {
@@ -122,7 +121,7 @@ PagerDuty.prototype.getOnCalls = function (params, callback) {
     setCacheData: ['checkCacheData', function (results, cb) {
       debug("setCacheData");
       var cacheableResult = results.checkCacheData;
-      self.cache.set(options.contentIndex, cacheableResult, cacheInterval, cb(null,cacheableResult));
+      self.cache.set(options.contentIndex, cacheableResult, self.cacheInterval, cb(null,cacheableResult));
     }]
   }, function(err, result) {
     callback(null, result.setCacheData);

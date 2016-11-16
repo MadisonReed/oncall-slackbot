@@ -14,7 +14,8 @@ var SlackBot = require('slackbots');
 
 const NodeCache = require("node-cache");
 var cache = new NodeCache();
-var cacheInterval = 3600; // 1 hour
+var cacheInterval = config.get("slack.cache_interval_seconds");
+var nextInQueueInterval = config.get("slack.next_in_queue_interval");
 
 var PagerDuty = require('./pagerduty.js');
 var pagerDuty = new PagerDuty(config.get('pagerduty'));
@@ -25,6 +26,7 @@ var bot = new SlackBot({
   name: config.get('slack.bot_name')
 });
 var iconEmoji = config.get('slack.emoji');
+var testUser = config.get('slack.test_user');
 
 /**
  * Send a message to the oncall people.
@@ -35,7 +37,7 @@ var messageOnCalls = function (message) {
   getOnCallSlackers(function (slackers) {
     _.each(slackers, function (slacker) {
       debug('POST MESSAGE TO: ' + slacker);
-      bot.postMessageToUser(slacker, message, {icon_emoji: iconEmoji});
+      bot.postMessageToUser(testUser || slacker, message, {icon_emoji: iconEmoji});
     })
   });
 };
@@ -51,12 +53,24 @@ var mentionOnCalls = function (channel, message) {
   getOnCallSlackers(function (slackers) {
     _.each(slackers, function (slacker) {
       debug('MENTION USER: ' + slacker);
-      usersToMention += '<@' + slacker + '> ';
+      usersToMention += '<@' + (testUser || slacker) + '> ';
     });
     bot.postMessageToChannel(channel, usersToMention.trim() + ', ' + message, {icon_emoji: iconEmoji});
   });
-
 };
+
+var postMessage = function (obj, preMessage, postMessage) {
+  var usersToMention = '';
+  getOnCallSlackers(function (slackers) {
+    _.each(slackers, function (slacker) {
+      debug('MENTION USER: ' + slacker);
+      usersToMention += '<@' + (testUser || slacker) + '> ';
+    });
+    bot.postMessage(obj, preMessage + ' ' + usersToMention.trim() + ' ' + postMessage, {icon_emoji: iconEmoji});
+  });
+
+}
+
 /**
  * Get the channels and cache 'em
  *
@@ -78,8 +92,8 @@ var cacheChannels = function (callback) {
 var getChannel = function (channelId, callback) {
   cache.get('channels', function (err, channelObj) {
     if (channelObj == undefined) {
-      cb = function(err, results) {
-        getChannel(channelId,callback);
+      cb = function (err, results) {
+        getChannel(channelId, callback);
       };
 
       cacheChannels(cb);
@@ -112,7 +126,7 @@ var cacheUsers = function (callback) {
 var getUser = function (email, callback) {
   cache.get('users', function (err, userObj) {
     if (userObj == undefined) {
-      cb = function(err, results) {
+      cb = function (err, results) {
         getUser(email, callback);
       };
 
@@ -126,16 +140,22 @@ var getUser = function (email, callback) {
   });
 };
 
+/**
+ * Return who's on call.
+ *
+ * @param callback
+ */
 var getOnCallSlackers = function (callback) {
   var oncallSlackers = [];
   pagerDuty.getOnCalls(null, function (err, pdUsers) {
+
     async.each(pdUsers, function (pdUser, cb) {
       getUser(pdUser.user.email, function (slacker) {
         oncallSlackers.push(slacker.name);
         cb();
       });
-    }, function(err) {
-      if(err) {
+    }, function (err) {
+      if (err) {
         debug(err);
       } else {
         callback(oncallSlackers);
@@ -144,6 +164,29 @@ var getOnCallSlackers = function (callback) {
   })
 };
 
+/**
+ * TBD
+ * @param channel
+ * @param user
+ * @param callback
+ */
+var storeMention = function (channel, user, callback) {
+
+};
+
+/**
+ * TBD
+ * @param channel
+ * @param user
+ * @param callback
+ */
+var clearStoredMention = function (channel, user, callback) {
+
+};
+
+/**
+ *  Start the bot
+ */
 bot.on('start', function () {
 
   async.series([
@@ -157,30 +200,42 @@ bot.on('start', function () {
       getOnCallSlackers(callback);
     }
   ], function () {
-    messageOnCalls(config.get('slack.welcome_message'));
+    var msg = config.get('slack.welcome_message').trim();
+    if (msg.length > 0) {
+      messageOnCalls(config.get('slack.welcome_message'));
+    }
   });
 });
 
 bot.on('message', function (data) {
     // all ingoing events https://api.slack.com/rtm
-    botUser = '<@' + bot.self.id + '>';
+    var botUser = '<@' + bot.self.id + '>';
     if (data.type == 'message') {
-      message = data.text.trim();
-      botIndex = data.text.indexOf(botUser);
+      var message = data.text.trim();
+      var botIndex = data.text.indexOf(botUser);
+
       if (data.bot_id == undefined && botIndex >= 0) {
         getChannel(data.channel, function (channel) {
-          // need to support mobile which adds : after a mention
-          if (message == botUser || message == botUser+":") {
+
+          if (message.match(new RegExp('^' + botUser + ':? who$'))) { // who command
+            postMessage(data.channel, 'These humans', 'are OnCall');
+          }
+          else if (message.match(new RegExp('^' + botUser + ':?'))) { // need to support mobile which adds : after a mention
             mentionOnCalls(channel.name, "get in here :point_up_2:");
-          } else {
+          }
+          else {
             preText = ' _<@' + data.user + '> said "';
-            if(botIndex == 0) {
-              mentionOnCalls(channel.name, preText + message.substr(botUser.length+1) + '_"');
+            if (botIndex == 0) {
+              mentionOnCalls(channel.name, preText + message.substr(botUser.length + 1) + '_"');
             } else {
               mentionOnCalls(channel.name, preText + message + '_"');
             }
           }
         });
+      } else if (data.bot_id == undefined && data.team == bot.team.id) {
+        if (message.match(new RegExp('^who$'))) { // who command
+          postMessage(data.user, 'These humans', 'are OnCall');
+        }
       }
     }
     debug(data);

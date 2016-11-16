@@ -4,10 +4,14 @@
     "emoji_conversation" : ":pager: :poop:",
     "welcome_message" : "OnCall Bot is alive.  TAG - you're it!",
     "slack_token" : "",
-    "bot_name" : "OnCall Bot"
+    "bot_name" : "OnCall Bot",
+    "cache_interval_seconds": 3600,
+    "next_in_queue_interval": 60,
+    "test_user": ""
   },
   "pagerduty" : {
     "schedule_ids" : [""],
-    "pagerduty_token": ""
+    "pagerduty_token": "",
+    "cache_interval_seconds": 300
   }
 }
