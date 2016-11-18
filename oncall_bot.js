@@ -220,7 +220,7 @@ bot.on('message', function (data) {
           if (message.match(new RegExp('^' + botUser + ':? who$'))) { // who command
             postMessage(data.channel, 'These humans', 'are OnCall');
           }
-          else if (message.match(new RegExp('^' + botUser + ':?'))) { // need to support mobile which adds : after a mention
+          else if (message.match(new RegExp('^' + botUser + ':?$'))) { // need to support mobile which adds : after a mention
             mentionOnCalls(channel.name, "get in here :point_up_2:");
           }
           else {
