@@ -28,6 +28,10 @@ var bot = new SlackBot({
 var iconEmoji = config.get('slack.emoji');
 var testUser = config.get('slack.test_user');
 
+// getUser constants
+const FIND_BY_EMAIL = 1;
+const FIND_BY_NAME = 2;
+
 /**
  * Send a message to the oncall people.
  *
@@ -79,7 +83,16 @@ var postMessage = function (obj, preMessage, postMessage) {
 var cacheChannels = function (callback) {
   bot.getChannels().then(function (data) {
     debug("Caching channels");
-    cache.set('channels', data, cacheInterval, callback);
+    async.each(data, function (channel, cb) {
+      debug("channel: " + JSON.stringify(channel));
+      cb();
+    }, function (err) {
+      if (err) {
+        debug(err);
+      } else {
+        cache.set('channels', data, cacheInterval, callback);
+      }
+    });
   });
 };
 
@@ -113,31 +126,51 @@ var getChannel = function (channelId, callback) {
  */
 var cacheUsers = function (callback) {
   bot.getUsers().then(function (data) {
-    debug("Caching users");
-    cache.set('users', data, cacheInterval, callback);
+    async.each(data.members, function (user, each_cb) {
+      debug("Caching user name/id: " + user.name);
+      cache.set(user.name, user, cacheInterval, each_cb);
+    }, function (err) {
+      if (err) {
+        debug(err);
+      } else {
+        cache.set('users', data, cacheInterval, callback);
+      }
+    });
   });
 };
 
 /**
  * Just get the users.
  *
+ * @param findBy  constant to use for searching
+ * @param value value to search by
  * @param callback
  */
-var getUser = function (email, callback) {
-  cache.get('users', function (err, userObj) {
-    if (userObj == undefined) {
-      cb = function (err, results) {
-        getUser(email, callback);
-      };
+var getUser = function (findBy, value, callback) {
+  if (findBy == FIND_BY_EMAIL) {
+    cache.get('users', function (err, userObj) {
+      if (userObj == undefined) {
+        cb = function (err, results) {
+          getUser(findBy, value, callback);
+        };
 
-      cacheUsers(cb);
-    } else {
-      var member = _.find(userObj.members, function (member) {
-        return member.profile.email == email
-      });
-      callback(member);
-    }
-  });
+        cacheUsers(cb);
+      } else {
+        var member = undefined;
+
+        if (findBy == FIND_BY_EMAIL) {
+          member = _.find(userObj.members, function (member) {
+            return member.profile.email == value
+          });
+        }
+        callback(null, member);
+      }
+    });
+  } else if (findBy == FIND_BY_NAME) {
+    cache.get(value, function (err, userObj) {
+      callback(null, userObj);
+    });
+  }
 };
 
 /**
@@ -150,7 +183,7 @@ var getOnCallSlackers = function (callback) {
   pagerDuty.getOnCalls(null, function (err, pdUsers) {
 
     async.each(pdUsers, function (pdUser, cb) {
-      getUser(pdUser.user.email, function (slacker) {
+      getUser(FIND_BY_EMAIL, pdUser.user.email, function (err, slacker) {
         oncallSlackers.push(slacker.name);
         cb();
       });
@@ -209,35 +242,56 @@ bot.on('start', function () {
 
 bot.on('message', function (data) {
     // all ingoing events https://api.slack.com/rtm
-    var botUser = '<@' + bot.self.id + '>';
     if (data.type == 'message') {
       var message = data.text.trim();
-      var botIndex = data.text.indexOf(botUser);
 
-      if (data.bot_id == undefined && botIndex >= 0) {
+      var botTag = '<@' + bot.self.id + '>';
+      var botTagIndex = message.indexOf(botTag);
+
+      // check if we need to look up a bot by it's username
+      var username = '';
+      var enableBotBotComm= false;
+      if (botTagIndex <= 0 && message.indexOf('<@') == 0) {
+        var userNameData = message.match(/^<@(.*?)>/g);
+        username = (userNameData && userNameData[0].replace(/[<@>]/g,''));
+        getUser(FIND_BY_NAME, username, function(err, user) {
+          if (user && user.is_bot) {
+            botTag = '<@' + user.id + '>';
+            enableBotBotComm = true;
+          }
+        });
+      }
+
+      // handle normal channel interaction
+      if ( (data.bot_id == undefined || data.bot_id != bot.self.id)
+        && (botTagIndex >= 0 || enableBotBotComm) ) {
         getChannel(data.channel, function (channel) {
 
-          if (message.match(new RegExp('^' + botUser + ':? who$'))) { // who command
-            postMessage(data.channel, 'These humans', 'are OnCall');
-          }
-          else if (message.match(new RegExp('^' + botUser + ':?$'))) { // need to support mobile which adds : after a mention
-            mentionOnCalls(channel.name, "get in here :point_up_2:");
-          }
-          else {
-            preText = ' _<@' + data.user + '> said "';
-            if (botIndex == 0) {
-              mentionOnCalls(channel.name, preText + message.substr(botUser.length + 1) + '_"');
-            } else {
-              mentionOnCalls(channel.name, preText + message + '_"');
+          if (channel) {
+            if (message.match(new RegExp('^' + botTag + ':? who$'))) { // who command
+              postMessage(data.channel, '', 'are the humans OnCall');
+            }
+            else if (message.match(new RegExp('^' + botTag + ':?$'))) { // need to support mobile which adds : after a mention
+              mentionOnCalls(channel.name, "get in here :point_up_2:");
+            }
+            else {
+              preText = (data.user ? ' _<@' + data.user + '>' : '_' + botTag) +  ' said "';
+              if (botTagIndex == 0) {
+                mentionOnCalls(channel.name, preText + message.substr(botTag.length + 1) + '_"');
+              } else if (data.user || enableBotBotComm) {
+                message = message.replace(/^<@(.*?)> +/,'');  // clean up spacing
+                mentionOnCalls(channel.name, preText + message + '_"');
+              }
             }
           }
         });
-      } else if (data.bot_id == undefined && data.team == bot.team.id) {
+      }
+      // handle direct bot interaction
+      else if (data.bot_id == undefined && data.team == bot.team.id) {
         if (message.match(new RegExp('^who$'))) { // who command
-          postMessage(data.user, 'These humans', 'are OnCall');
+          postMessage(data.user, '', 'are the humans OnCall');
         }
       }
     }
-    debug(data);
   }
 );
