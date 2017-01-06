@@ -243,7 +243,7 @@ bot.on('start', function () {
 bot.on('message', function (data) {
     // all ingoing events https://api.slack.com/rtm
     if (data.type == 'message') {
-      var message = data.text.trim();
+      var message = data.text ? data.text.trim() : '';
 
       var botTag = '<@' + bot.self.id + '>';
       var botTagIndex = message.indexOf(botTag);
@@ -275,7 +275,7 @@ bot.on('message', function (data) {
               mentionOnCalls(channel.name, "get in here :point_up_2:");
             }
             else {
-              preText = (data.user ? ' _<@' + data.user + '>' : '_' + botTag) +  ' said "';
+              preText = (data.user ? ' <@' + data.user + '>' : botTag) +  ' said _"';
               if (botTagIndex == 0) {
                 mentionOnCalls(channel.name, preText + message.substr(botTag.length + 1) + '_"');
               } else if (data.user || enableBotBotComm) {
