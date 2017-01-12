@@ -6,6 +6,7 @@
  */
 
 var config = require('config');
+var pjson = require('./package.json');
 var async = require('async');
 var debug = require('debug')('oncall_bot');
 var _ = require('underscore');
@@ -63,6 +64,13 @@ var mentionOnCalls = function (channel, message) {
   });
 };
 
+/**
+ * Post message with reference to on call peeps
+ *
+ * @param obj
+ * @param preMessage
+ * @param postMessage
+ */
 var postMessage = function (obj, preMessage, postMessage) {
   var usersToMention = '';
   getOnCallSlackers(function (slackers) {
@@ -72,8 +80,7 @@ var postMessage = function (obj, preMessage, postMessage) {
     });
     bot.postMessage(obj, preMessage + ' ' + usersToMention.trim() + ' ' + postMessage, {icon_emoji: iconEmoji});
   });
-
-}
+};
 
 /**
  * Get the channels and cache 'em
@@ -269,10 +276,10 @@ bot.on('message', function (data) {
 
           if (channel) {
             if (message.match(new RegExp('^' + botTag + ':? who$'))) { // who command
-              postMessage(data.channel, '', 'are the humans OnCall');
+              postMessage(data.channel, '', 'are the humans OnCall.');
             }
             else if (message.match(new RegExp('^' + botTag + ':?$'))) { // need to support mobile which adds : after a mention
-              mentionOnCalls(channel.name, "get in here :point_up_2:");
+              mentionOnCalls(channel.name, "get in here! :point_up_2:");
             }
             else {
               preText = (data.user ? ' <@' + data.user + '>' : botTag) +  ' said _"';
@@ -289,7 +296,13 @@ bot.on('message', function (data) {
       // handle direct bot interaction
       else if (data.bot_id == undefined && data.team == bot.team.id) {
         if (message.match(new RegExp('^who$'))) { // who command
-          postMessage(data.user, '', 'are the humans OnCall');
+          postMessage(data.user, '', 'are the humans OnCall.');
+        }
+        else if (message.match(new RegExp('^version'))) { // version command
+          bot.postMessage(data.user, 'I am *' + pjson.name + '* and running version ' + pjson.version + '.', {icon_emoji: iconEmoji});
+        }
+        else if (message.match(new RegExp('^help'))) { // help command
+          bot.postMessage(data.user, 'I understand the following direct commands: *help*, *who*, & *version*.', {icon_emoji: iconEmoji});
         }
       }
     }
