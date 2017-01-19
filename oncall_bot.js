@@ -30,6 +30,7 @@ var iconEmoji = config.get('slack.emoji');
 var testUser = config.get('slack.test_user');
 
 // getUser constants
+const FIND_BY_ID = 0;
 const FIND_BY_EMAIL = 1;
 const FIND_BY_NAME = 2;
 
@@ -57,12 +58,12 @@ var mentionOnCalls = function (channel, message) {
   var usersToMention = '';
   getOnCallSlackers(function (slackers) {
     _.each(slackers, function (slacker) {
-      debug('MENTION USER: ' + slacker);
       usersToMention += '<@' + (testUser || slacker) + '> ';
     });
     bot.postMessageToChannel(channel, usersToMention.trim() + ', ' + message, {icon_emoji: iconEmoji});
   });
 };
+
 
 /**
  * Post message with reference to on call peeps
@@ -70,15 +71,20 @@ var mentionOnCalls = function (channel, message) {
  * @param obj
  * @param preMessage
  * @param postMessage
+ * @param direct
  */
-var postMessage = function (obj, preMessage, postMessage) {
+var postMessage = function (obj, preMessage, postMessage, direct) {
   var usersToMention = '';
   getOnCallSlackers(function (slackers) {
     _.each(slackers, function (slacker) {
-      debug('MENTION USER: ' + slacker);
       usersToMention += '<@' + (testUser || slacker) + '> ';
     });
-    bot.postMessage(obj, preMessage + ' ' + usersToMention.trim() + ' ' + postMessage, {icon_emoji: iconEmoji});
+    var message = ' ' + usersToMention.trim() + ' ' + postMessage;
+    if(direct) {
+      bot.postMessageToUser(obj, message, {icon_emoji: iconEmoji});
+    } else {
+      bot.postMessage(obj, message, {icon_emoji: iconEmoji});
+    }
   });
 };
 
@@ -104,6 +110,35 @@ var cacheChannels = function (callback) {
 };
 
 /**
+ * Get the users and cache 'em.
+ *
+ * @param callback
+ */
+var cacheUsers = function (callback) {
+  bot.getUsers().then(function (data) {
+    async.each(data.members, function (user, each_cb) {
+      debug("Caching user name/id: " + user.name);
+
+      async.parallel([
+        function (cb) {
+          cache.set(user.name, user, cacheInterval, cb);
+        },
+        function (cb) {
+          cache.set('ID:' + user.id, user, cacheInterval, cb);
+        }
+      ], each_cb);
+    }, function (err) {
+      if (err) {
+        debug(err);
+        callback(err);
+      } else {
+        cache.set('users', data, cacheInterval, callback);
+      }
+    });
+  });
+};
+
+/**
  * Get a channel by id
  *
  * @param channelId
@@ -123,26 +158,6 @@ var getChannel = function (channelId, callback) {
       });
       callback(channel);
     }
-  });
-};
-
-/**
- * Get the users and cache 'em.
- *
- * @param callback
- */
-var cacheUsers = function (callback) {
-  bot.getUsers().then(function (data) {
-    async.each(data.members, function (user, each_cb) {
-      debug("Caching user name/id: " + user.name);
-      cache.set(user.name, user, cacheInterval, each_cb);
-    }, function (err) {
-      if (err) {
-        debug(err);
-      } else {
-        cache.set('users', data, cacheInterval, callback);
-      }
-    });
   });
 };
 
@@ -175,6 +190,10 @@ var getUser = function (findBy, value, callback) {
     });
   } else if (findBy == FIND_BY_NAME) {
     cache.get(value, function (err, userObj) {
+      callback(null, userObj);
+    });
+  } else if (findBy == FIND_BY_ID) {
+    cache.get('ID:' + value, function (err, userObj) {
       callback(null, userObj);
     });
   }
@@ -250,6 +269,7 @@ bot.on('start', function () {
 bot.on('message', function (data) {
     // all ingoing events https://api.slack.com/rtm
     if (data.type == 'message') {
+      var notABot = (data.bot_id == undefined);
       var message = data.text ? data.text.trim() : '';
 
       var botTag = '<@' + bot.self.id + '>';
@@ -270,18 +290,17 @@ bot.on('message', function (data) {
       }
 
       // handle normal channel interaction
-      if ( (data.bot_id == undefined || data.bot_id != bot.self.id)
+      if ( (notABot || data.bot_id != bot.self.id)
         && (botTagIndex >= 0 || enableBotBotComm) ) {
         getChannel(data.channel, function (channel) {
-
           if (channel) {
             if (message.match(new RegExp('^' + botTag + ':? who$'))) { // who command
-              postMessage(data.channel, '', 'are the humans OnCall.');
+              postMessage(data.channel, '', 'are the humans OnCall.', false);
             }
             else if (message.match(new RegExp('^' + botTag + ':?$'))) { // need to support mobile which adds : after a mention
               mentionOnCalls(channel.name, "get in here! :point_up_2:");
             }
-            else {
+            else {  // default
               preText = (data.user ? ' <@' + data.user + '>' : botTag) +  ' said _"';
               if (botTagIndex == 0) {
                 mentionOnCalls(channel.name, preText + message.substr(botTag.length + 1) + '_"');
@@ -294,16 +313,22 @@ bot.on('message', function (data) {
         });
       }
       // handle direct bot interaction
-      else if (data.bot_id == undefined && data.team == bot.team.id) {
-        if (message.match(new RegExp('^who$'))) { // who command
-          postMessage(data.user, '', 'are the humans OnCall.');
-        }
-        else if (message.match(new RegExp('^version'))) { // version command
-          bot.postMessage(data.user, 'I am *' + pjson.name + '* and running version ' + pjson.version + '.', {icon_emoji: iconEmoji});
-        }
-        else if (message.match(new RegExp('^help'))) { // help command
-          bot.postMessage(data.user, 'I understand the following direct commands: *help*, *who*, & *version*.', {icon_emoji: iconEmoji});
-        }
+      else if (notABot) {
+        getChannel(data.channel, function (channel) {
+          if(!channel) {
+            getUser(FIND_BY_ID, data.user, function (err, user) {
+              if (message.match(new RegExp('^who$'))) { // who command
+                postMessage(user.name, '', 'are the humans OnCall.', true);
+              }
+              else if (message.match(new RegExp('^version'))) { // version command
+                bot.postMessageToUser(user.name, 'I am *' + pjson.name + '* and running version ' + pjson.version + '.', {icon_emoji: iconEmoji});
+              }
+              else if (message.match(new RegExp('^help'))) { // help command
+                bot.postMessageToUser(user.name, 'I understand the following direct commands: *help*, *who* & *version*.', {icon_emoji: iconEmoji});
+              }
+            });
+          }
+        });
       }
     }
   }
