@@ -190,11 +190,27 @@ var getUser = function (findBy, value, callback) {
     });
   } else if (findBy == FIND_BY_NAME) {
     cache.get(value, function (err, userObj) {
-      callback(null, userObj);
+      if (userObj == undefined) {
+        cb = function (err, results) {
+          getUser(findBy, value, callback);
+        };
+
+        cacheUsers(cb);
+      } else {
+        callback(null, userObj);
+      }
     });
   } else if (findBy == FIND_BY_ID) {
     cache.get('ID:' + value, function (err, userObj) {
-      callback(null, userObj);
+      if (userObj == undefined) {
+        cb = function (err, results) {
+          getUser(findBy, value, callback);
+        };
+
+        cacheUsers(cb);
+      } else {
+        callback(null, userObj);
+      }
     });
   }
 };
@@ -317,14 +333,18 @@ bot.on('message', function (data) {
         getChannel(data.channel, function (channel) {
           if(!channel) {
             getUser(FIND_BY_ID, data.user, function (err, user) {
-              if (message.match(new RegExp('^who$'))) { // who command
-                postMessage(user.name, '', 'are the humans OnCall.', true);
-              }
-              else if (message.match(new RegExp('^version'))) { // version command
-                bot.postMessageToUser(user.name, 'I am *' + pjson.name + '* and running version ' + pjson.version + '.', {icon_emoji: iconEmoji});
-              }
-              else if (message.match(new RegExp('^help'))) { // help command
-                bot.postMessageToUser(user.name, 'I understand the following direct commands: *help*, *who* & *version*.', {icon_emoji: iconEmoji});
+              if (err) {
+                debug(err);
+              } else {
+                if (message.match(new RegExp('^who$'))) { // who command
+                  postMessage(user.name, '', 'are the humans OnCall.', true);
+                }
+                else if (message.match(new RegExp('^version'))) { // version command
+                  bot.postMessageToUser(user.name, 'I am *' + pjson.name + '* and running version ' + pjson.version + '.', {icon_emoji: iconEmoji});
+                }
+                else if (message.match(new RegExp('^help'))) { // help command
+                  bot.postMessageToUser(user.name, 'I understand the following direct commands: *help*, *who* & *version*.', {icon_emoji: iconEmoji});
+                }
               }
             });
           }
