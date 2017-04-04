@@ -34,6 +34,11 @@ const FIND_BY_ID = 0;
 const FIND_BY_EMAIL = 1;
 const FIND_BY_NAME = 2;
 
+// commands
+const HELP_REGEX = new RegExp('^[hH]elp$');
+const WHO_REGEX = new RegExp('^[wW]ho$');
+const VERSION_REGEX = new RegExp('^[vV]ersion$');
+
 /**
  * Send a message to the oncall people.
  *
@@ -169,7 +174,7 @@ var getChannel = function (channelId, callback) {
  * @param callback
  */
 var getUser = function (findBy, value, callback) {
-  if (findBy == FIND_BY_EMAIL) {
+  if (findBy == FIND_BY_EMAIL && value.indexOf('@') > 0) {
     cache.get('users', function (err, userObj) {
       if (userObj == undefined) {
         cb = function (err, results) {
@@ -185,22 +190,10 @@ var getUser = function (findBy, value, callback) {
             return member.profile.email == value
           });
         }
-        callback(null, member);
+        callback(!member ? value + " not mapped to user" : null, member);
       }
     });
-  } else if (findBy == FIND_BY_NAME) {
-    cache.get(value, function (err, userObj) {
-      if (userObj == undefined) {
-        cb = function (err, results) {
-          getUser(findBy, value, callback);
-        };
-
-        cacheUsers(cb);
-      } else {
-        callback(null, userObj);
-      }
-    });
-  } else if (findBy == FIND_BY_ID) {
+  } else if (findBy == FIND_BY_ID && value.indexOf('U') == 0 && value.length == 9) {
     cache.get('ID:' + value, function (err, userObj) {
       if (userObj == undefined) {
         cb = function (err, results) {
@@ -209,12 +202,23 @@ var getUser = function (findBy, value, callback) {
 
         cacheUsers(cb);
       } else {
-        callback(null, userObj);
+        callback(!userObj ? value + " not mapped to user" : null, userObj);
+      }
+    });
+  } else if (findBy == FIND_BY_NAME && !(value.indexOf('U') == 0 && value.length == 9)) {
+    cache.get(value, function (err, userObj) {
+      if (userObj == undefined) {
+        cb = function (err, results) {
+          getUser(findBy, value, callback);
+        };
+
+        cacheUsers(cb);
+      } else {
+        callback(!userObj ? value + " not mapped to user" : null, userObj);
       }
     });
   }
 };
-
 /**
  * Return who's on call.
  *
@@ -336,13 +340,13 @@ bot.on('message', function (data) {
               if (err) {
                 debug(err);
               } else {
-                if (message.match(new RegExp('^who$'))) { // who command
+                if (message.match(WHO_REGEX)) { // who command
                   postMessage(user.name, '', 'are the humans OnCall.', true);
                 }
-                else if (message.match(new RegExp('^version'))) { // version command
+                else if (message.match(VERSION_REGEX)) { // version command
                   bot.postMessageToUser(user.name, 'I am *' + pjson.name + '* and running version ' + pjson.version + '.', {icon_emoji: iconEmoji});
                 }
-                else if (message.match(new RegExp('^help'))) { // help command
+                else if (message.match(HELP_REGEX)) { // help command
                   bot.postMessageToUser(user.name, 'I understand the following direct commands: *help*, *who* & *version*.', {icon_emoji: iconEmoji});
                 }
               }

@@ -2,7 +2,7 @@
   "author": "Madison Reed <eng@madison-reed.com>",
   "name": "oncall-slackbot",
   "description": "Pager Duty #slack bot",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "engines": {
     "node": "4.4.6",
