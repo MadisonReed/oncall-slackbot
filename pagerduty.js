@@ -2,7 +2,7 @@
 /*globals module: true */
 
 var oncallsParams = {
-  time_zone: 'UTC',
+  "time_zone": 'UTC',
   "include[]": 'users',
   "schedule_ids[]" : {}
 };
@@ -22,7 +22,7 @@ const NodeCache = require( "node-cache" );
  *
  **/
 var PagerDuty = function (options) {
-  this.headers = {'Content-Type': 'application/json', 'Authorization': 'Token token=' + options.pagerduty_token};
+  this.headers = {'Accept': 'application/vnd.pagerduty+json;version=2', 'Content-Type': 'application/json', 'Authorization': 'Token token=' + options.pagerduty_token};
   this.endpoint = "https://api.pagerduty.com";
   this.cache = new NodeCache();
   oncallsParams["schedule_ids[]"] = options.schedule_ids;
@@ -41,7 +41,8 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
     self = this,
     requestOptions = {
       headers: self.headers,
-      json: true
+      json: true,
+      total: true
     };
 
   var pagedCallback = function (error, content) {
@@ -92,7 +93,7 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
     request(requestOptions, function (error, response, body) {
       if (!error && response.statusCode == 200) {
         pagedCallback(null, body);
-      } else {items
+      } else {
         pagedCallback(error);
       }
     });
