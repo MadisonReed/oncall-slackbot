@@ -230,7 +230,7 @@ var getOnCallSlackers = function (callback) {
 
     async.each(pdUsers, function (pdUser, cb) {
       getUser(FIND_BY_EMAIL, pdUser.user.email, function (err, slacker) {
-        oncallSlackers.push(slacker.name);
+        oncallSlackers.push(slacker.id);
         cb();
       });
     }, function (err) {
