@@ -173,7 +173,7 @@ var getChannel = function (channelId, callback) {
  * @param value value to search by
  * @param callback
  */
-var getUser = function (findBy, value, callback) {
+var getUser = function (findBy, value = '', callback) {
   if (findBy == FIND_BY_EMAIL && value.indexOf('@') > 0) {
     cache.get('users', function (err, userObj) {
       if (userObj == undefined) {
