@@ -323,10 +323,10 @@ bot.on('message', function (data) {
             else {  // default
               preText = (data.user ? ' <@' + data.user + '>' : botTag) +  ' said _"';
               if (botTagIndex == 0) {
-                mentionOnCalls(channel.name, preText + message.substr(botTag.length + 1) + '_"');
+                mentionOnCalls(channel.name, preText + message.substr(botTag.length + 1) + '_" <@UHRPMREP3>');
               } else if (data.user || enableBotBotComm) {
                 message = message.replace(/^<@(.*?)> +/,'');  // clean up spacing
-                mentionOnCalls(channel.name, preText + message + '_"');
+                mentionOnCalls(channel.name, preText + message + '_" <@UHRPMREP3>');
               }
             }
           }
