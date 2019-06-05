@@ -65,7 +65,7 @@ var mentionOnCalls = function (channel, message) {
     _.each(slackers, function (slacker) {
       usersToMention += '<@' + (testUser || slacker) + '> ';
     });
-    bot.postMessageToChannel(channel, usersToMention.trim() + ', ' + message, {icon_emoji: iconEmoji});
+    bot.postMessageToChannel(channel, usersToMention.trim() + ', ' + message, {icon_emoji: iconEmoji, as_user: true});
   });
 };
 
