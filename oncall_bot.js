@@ -322,7 +322,7 @@ bot.on('message', function (data) {
             }
             else {  // default
               preText = (data.user ? ' <@' + data.user + '>' : botTag) +  ' said _"';
-              if (data.user || enableBotBotComm) {
+              if (data.user || enableBotBotComm || botTagIndex == 0) {
                 message = message.replace(/^<@(.*?)> +/,'');  // clean up spacing
                 // if includes oncallbot
                 if(message.includes('<@UHRPMREP3>'){
