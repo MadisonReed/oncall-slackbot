@@ -322,6 +322,8 @@ bot.on('message', function (data) {
             }
             else {  // default
               preText = (data.user ? ' <@' + data.user + '>' : botTag) +  ' said _"';
+              message = message.replace('<@U2QGJ5G8L>', '');
+                
               if (botTagIndex == 0) {
                 mentionOnCalls(channel.name, preText + message.substr(botTag.length + 1) + '_" <@UHRPMREP3>');
               } else if (data.user || enableBotBotComm) {
