@@ -322,10 +322,18 @@ bot.on('message', function (data) {
             }
             else {  // default
               preText = (data.user ? ' <@' + data.user + '>' : botTag) +  ' said _"';
-              message = message.replace(/<@U2QGJ5G8L>|<@UHRPMREP3>/gi, '');
               if (data.user || enableBotBotComm) {
                 message = message.replace(/^<@(.*?)> +/,'');  // clean up spacing
-                mentionOnCalls(channel.name, preText + message + '_" <@UHRPMREP3>');
+                // if includes oncallbot
+                if(message.includes('<@UHRPMREP3>'){
+                   // replace oncall and oncallbot
+                   message = message.replace(/<@U2QGJ5G8L>|<@UHRPMREP3>/gi, '');
+                   mentionOnCalls(channel.name, preText + message + '_"');
+                } else {
+                  // replace oncall and add oncallbot
+                  message = message.replace(/<@U2QGJ5G8L>/gi, '');
+                  mentionOnCalls(channel.name, preText + message + '_" <@UHRPMREP3>');
+                }
               }
             }
           }
