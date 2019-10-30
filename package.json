@@ -13,7 +13,7 @@
     "config": "1.21.0",
     "debug": "*",
     "node-cache": "4.1.0",
-    "request": "2.34.0",
+    "request": "2.88.0",
     "slackbots": "0.5.3",
     "underscore": "1.8.3"
   },
