@@ -11,11 +11,11 @@
   "dependencies": {
     "async": "2.1.2",
     "config": "1.21.0",
-    "debug": "*",
+    "debug": "^4.3.2",
     "node-cache": "4.1.0",
-    "request": "2.34.0",
-    "slackbots": "0.5.3",
-    "underscore": "1.8.3"
+    "request": "^2.88.2",
+    "slackbots": "^1.2.0",
+    "underscore": "^1.13.1"
   },
   "repository": {
     "type": "git",
