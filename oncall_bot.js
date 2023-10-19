@@ -84,7 +84,9 @@ var mentionOnCalls = function(channel, message) {
  */
 var postMessage = function(obj, preMessage, postMessage, direct) {
   var usersToMention = "";
+  debug("getting oncalls");
   getOnCallSlackers(function(slackers) {
+    debug("got oncalls", slackers);
     _.each(slackers, function(slacker) {
       usersToMention += "<@" + (testUser || slacker) + "> ";
     });
@@ -103,12 +105,13 @@ var postMessage = function(obj, preMessage, postMessage, direct) {
  * @param callback
  */
 var cacheChannels = function(callback) {
+  debug("Caching channels");
   bot.getChannels().then(function(data) {
-    debug("Caching channels");
+    debug(data);
     async.each(
       data,
       function(channel, cb) {
-        debug("channel: " + JSON.stringify(channel));
+        // debug("channel: " , channel);
         cb();
       },
       function(err) {
@@ -132,7 +135,7 @@ var cacheUsers = function(callback) {
     async.each(
       data.members,
       function(user, each_cb) {
-        debug("Caching user name/id: " + user.name);
+        // debug("Caching user name/id: " + user.name);
 
         async.parallel(
           [
@@ -167,12 +170,15 @@ var cacheUsers = function(callback) {
 var getChannel = function(channelId, callback) {
   cache.get("channels", function(err, channelObj) {
     if (channelObj == undefined) {
+      debug("undefined channels object")
       cb = function(err, results) {
         getChannel(channelId, callback);
       };
 
       cacheChannels(cb);
     } else {
+      debug(channelObj.channels.map(ch=>ch.id));
+      debug(channelId);
       var channel = _.find(channelObj.channels, function(channel) {
         return channel.id == channelId;
       });
@@ -248,6 +254,7 @@ var getUser = function(findBy, value = "", callback) {
  */
 var getOnCallSlackers = function(callback) {
   var oncallSlackers = [];
+  debug("pre pagerduty.getOnCalls");
   pagerDuty.getOnCalls(null, function(err, pdUsers) {
     async.each(
       pdUsers,
@@ -312,6 +319,7 @@ bot.on("start", function() {
 bot.on("message", function(data) {
   // all ingoing events https://api.slack.com/rtm
   if (data.type == "message") {
+    debug("message", data.type, data);
     var notABot = data.bot_id == undefined;
     var message = data.text ? data.text.trim() : "";
 
@@ -338,8 +346,11 @@ bot.on("message", function(data) {
       (botTagIndex >= 0 || enableBotBotComm)
     ) {
       getChannel(data.channel, function(channel) {
+        debug("got channel", channel);
         if (channel) {
+          debug("channel",channel);
           if (message.match(new RegExp("^" + botTag + ":? who$"))) {
+            debug("who command");
             // who command
             postMessage(data.channel, "", "are the humans OnCall.", false);
           } else if (message.match(new RegExp("^" + botTag + ":?$"))) {

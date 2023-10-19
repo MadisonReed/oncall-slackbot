@@ -31,6 +31,7 @@ var PagerDuty = function (options) {
 };
 
 PagerDuty.prototype.getAllPaginatedData = function (options) {
+  debug("getAllPaginatedData");
   options.params = options.params || {};
   options.params.limit = 100; // 100 is the max limit allowed by pagerduty
   options.params.offset = 0;
@@ -87,6 +88,7 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
   };
 
   var requestAnotherPage = function () {
+    debug("requesting another page");
     // must use node's built in querystring since qs doesn't build arrays like PagerDuty expects.
     requestOptions.url = self.endpoint + options.uri + "?" + querystring.stringify(options.params);
 
@@ -103,6 +105,7 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
 };
 
 PagerDuty.prototype.getOnCalls = function (params, callback) {
+  debug("pagerduty.getOnCalls");
   var options = {contentIndex: "oncalls", secondaryIndex: 'user', sortBy: 'escalation_level', uri: "/oncalls", callback: callback, params: params || oncallsParams };
   var self = this;
   async.auto({
@@ -125,6 +128,9 @@ PagerDuty.prototype.getOnCalls = function (params, callback) {
       self.cache.set(options.contentIndex, cacheableResult, self.cacheInterval, cb(null,cacheableResult));
     }]
   }, function(err, result) {
+    if (err){
+      debug("err:", err);
+    }
     callback(null, result.setCacheData);
   });
 };
