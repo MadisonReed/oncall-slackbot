@@ -4,6 +4,9 @@
   "description": "Pager Duty #slack bot",
   "version": "0.3.1",
   "private": true,
+  "scripts": {
+    "start": "node oncall_bot.js"
+  },
   "engines": {
     "node": "4.4.6",
     "npm": "2.15.5"
