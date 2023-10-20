@@ -2,18 +2,17 @@
 /*globals module: true */
 
 var oncallsParams = {
-  "time_zone": 'UTC',
-  "include[]": 'users',
-  "schedule_ids[]" : {}
+  time_zone: "UTC",
+  "include[]": "users",
 };
 
 //
-var request = require('request');
-var async = require('async');
-var _ = require('underscore');
-var querystring = require('querystring');
-var debug = require('debug')('pagerduty');
-const NodeCache = require( "node-cache" );
+var request = require("request");
+var async = require("async");
+var _ = require("underscore");
+var querystring = require("querystring");
+var debug = require("debug")("pagerduty");
+const NodeCache = require("node-cache");
 
 /**
  * params object:
@@ -21,16 +20,19 @@ const NodeCache = require( "node-cache" );
  *   token: String (required)
  *
  **/
-var PagerDuty = function (options) {
-  this.headers = {'Accept': 'application/vnd.pagerduty+json;version=2', 'Content-Type': 'application/json', 'Authorization': 'Token token=' + options.pagerduty_token};
+var PagerDuty = function(options) {
+  this.headers = {
+    Accept: "application/vnd.pagerduty+json;version=2",
+    "Content-Type": "application/json",
+    Authorization: "Token token=" + options.pagerduty_token,
+  };
   this.endpoint = "https://api.pagerduty.com";
   this.cache = new NodeCache();
-  oncallsParams["schedule_ids[]"] = options.schedule_ids;
   this.token = options.pagerduty_token;
   this.cacheInterval = options.cache_interval_seconds;
 };
 
-PagerDuty.prototype.getAllPaginatedData = function (options) {
+PagerDuty.prototype.getAllPaginatedData = function(options) {
   debug("getAllPaginatedData");
   options.params = options.params || {};
   options.params.limit = 100; // 100 is the max limit allowed by pagerduty
@@ -43,10 +45,10 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
     requestOptions = {
       headers: self.headers,
       json: true,
-      total: true
+      total: true,
     };
 
-  var pagedCallback = function (error, content) {
+  var pagedCallback = function(error, content) {
     if (error) {
       debug("Issues with pagedCallback: " + error);
       return options.callback(error);
@@ -67,17 +69,20 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
 
     // Index the results as a map from id: item
     if (options.sortBy) {
-      items.sort(function(a,b) {
+      items.sort(function(a, b) {
         return a[options.sortBy] - b[options.sortBy];
       });
     }
 
-    _.each(items, function(item, i) {
+    _.each(items, function(item, _i) {
       index = item.id || item[options.secondaryIndex].id;
-      if(options.sortBy) {
-        index = item[options.sortBy] + '-' + index;
+      // only add oncalls with a schedule
+      if (item.schedule) {
+        if (options.sortBy) {
+          index = item[options.sortBy] + "-" + index;
+        }
+        items_map[index] = item;
       }
-      items_map[index] = item;
     });
 
     if (options.params.offset >= total) {
@@ -87,12 +92,13 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
     }
   };
 
-  var requestAnotherPage = function () {
+  var requestAnotherPage = function() {
     debug("requesting another page");
     // must use node's built in querystring since qs doesn't build arrays like PagerDuty expects.
-    requestOptions.url = self.endpoint + options.uri + "?" + querystring.stringify(options.params);
+    requestOptions.url =
+      self.endpoint + options.uri + "?" + querystring.stringify(options.params);
 
-    request(requestOptions, function (error, response, body) {
+    request(requestOptions, function(error, response, body) {
       if (!error && response.statusCode == 200) {
         pagedCallback(null, body);
       } else {
@@ -104,35 +110,56 @@ PagerDuty.prototype.getAllPaginatedData = function (options) {
   requestAnotherPage();
 };
 
-PagerDuty.prototype.getOnCalls = function (params, callback) {
+PagerDuty.prototype.getOnCalls = function(params, callback) {
   debug("pagerduty.getOnCalls");
-  var options = {contentIndex: "oncalls", secondaryIndex: 'user', sortBy: 'escalation_level', uri: "/oncalls", callback: callback, params: params || oncallsParams };
+  var options = {
+    contentIndex: "oncalls",
+    secondaryIndex: "user",
+    sortBy: "escalation_level",
+    uri: "/oncalls",
+    callback: callback,
+    params: params || oncallsParams,
+  };
   var self = this;
-  async.auto({
-    getCacheData: function(cb) {
-      debug("getCacheData");
-      self.cache.get(options.contentIndex, cb);
+  async.auto(
+    {
+      getCacheData: function(cb) {
+        debug("getCacheData");
+        self.cache.get(options.contentIndex, cb);
+      },
+      checkCacheData: [
+        "getCacheData",
+        function(results, cb) {
+          debug("checkCacheData");
+          if (results.getCacheData == undefined) {
+            options.callback = cb;
+            self.getAllPaginatedData(options);
+          } else {
+            callback(null, results.getCacheData);
+          }
+        },
+      ],
+      setCacheData: [
+        "checkCacheData",
+        function(results, cb) {
+          debug("setCacheData");
+          var cacheableResult = results.checkCacheData;
+          self.cache.set(
+            options.contentIndex,
+            cacheableResult,
+            self.cacheInterval,
+            cb(null, cacheableResult)
+          );
+        },
+      ],
     },
-    checkCacheData: ['getCacheData', function (results, cb) {
-      debug("checkCacheData");
-      if (results.getCacheData == undefined) {
-        options.callback = cb;
-        self.getAllPaginatedData(options);
-      } else {
-        callback(null, results.getCacheData);
+    function(err, result) {
+      if (err) {
+        debug("err:", err);
       }
-    }],
-    setCacheData: ['checkCacheData', function (results, cb) {
-      debug("setCacheData");
-      var cacheableResult = results.checkCacheData;
-      self.cache.set(options.contentIndex, cacheableResult, self.cacheInterval, cb(null,cacheableResult));
-    }]
-  }, function(err, result) {
-    if (err){
-      debug("err:", err);
+      callback(null, result.setCacheData);
     }
-    callback(null, result.setCacheData);
-  });
+  );
 };
 
 module.exports = PagerDuty;
