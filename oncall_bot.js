@@ -96,7 +96,7 @@ var mentionOnCalls = function (channel, message) {
  * @param postMessage
  * @param direct
  */
-var postMessage = function (obj, preMessage, postMessage, direct) {
+const postMessage = (obj, preMessage, postMessage, direct) => {
   var usersToMention = "";
   debug("getting oncalls");
   getOnCallSlackers(function (slackers) {
@@ -385,11 +385,11 @@ bot.on("message", function (data) {
             debug(err);
           } else {
             debug(message);
+            handle_version_cmd(bot, user, message);
+            // handle_who_cmd(bot, user, message);
             if (message.match(WHO_REGEX)) {
               // who command
               postMessage(user.name, "", "are the humans OnCall.", true);
-            } else if (message.match(VERSION_REGEX)) {
-              handle_version(bot, user, message);
             } else if (message.match(HELP_REGEX)) {
               // help command
               if (DEBUG_RUN) {
