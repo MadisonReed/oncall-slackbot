@@ -7,8 +7,8 @@ const DEBUG_RUN = process.env.DEBUG_RUN || false;
 export { DEBUG_RUN };
 
 import config from 'config';
-import pjson from "./package.json" assert { type: "json" };
 import async from "async";
+import {handle_version }from "./version.js";
 import dbg from 'debug';
 import _ from "underscore";
 import SlackBot from "slackbots";
@@ -25,12 +25,12 @@ var pagerDuty = new PagerDuty(config.get("pagerduty"));
 
 // create a bot
 console.log("token:", config.get("slack.slack_token"));
-var bot = new SlackBot({
+const bot = new SlackBot({
   token: config.get("slack.slack_token"), // Add a bot https://my.slack.com/services/new/bot and put the token
   name: config.get("slack.bot_name"),
 });
-var iconEmoji = config.get("slack.emoji");
-var testUser = config.get("slack.test_user");
+const iconEmoji = config.get("slack.emoji");
+const testUser = config.get("slack.test_user");
 
 // getUser constants
 const FIND_BY_ID = 0;
@@ -346,7 +346,7 @@ bot.on("message", function (data) {
     });
   }
 
-  // handle normal channel interaction
+  // handle non-DM channel interaction
   if (botTagIndex >= 0 || enableBotBotComm) {
     getChannel(data.channel, function (channel) {
       debug("got channel", channel);
@@ -389,20 +389,7 @@ bot.on("message", function (data) {
               // who command
               postMessage(user.name, "", "are the humans OnCall.", true);
             } else if (message.match(VERSION_REGEX)) {
-              // version command
-              if (DEBUG_RUN) {
-                // don't send message
-              } else {
-                bot.postMessageToUser(
-                  user.name,
-                  "I am *" +
-                    pjson.name +
-                    "* and running version " +
-                    pjson.version +
-                    ".",
-                  { icon_emoji: iconEmoji }
-                );
-              }
+              handle_version(bot, user, message);
             } else if (message.match(HELP_REGEX)) {
               // help command
               if (DEBUG_RUN) {
