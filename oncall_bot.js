@@ -1,8 +1,5 @@
 /**
  * OnCall #slack bot that integrates with PagerDuty
- *
- * TODO notify all the channels that have invited the bot that there might have been a change in command
- *
  */
 
 // Run a dry run without sending any actual messages.
@@ -48,9 +45,9 @@ const VERSION_REGEX = new RegExp("^[vV]ersion$");
  *
  * @param message
  */
-var messageOnCalls = function (message) {
-  getOnCallSlackers(function (slackers) {
-    _.each(slackers, function (slacker) {
+var messageOnCalls = function(message) {
+  getOnCallSlackers(function(slackers) {
+    _.each(slackers, function(slacker) {
       debug("POST MESSAGE TO: " + slacker, message);
       if (DEBUG_RUN) {
         // don't send message
@@ -69,10 +66,10 @@ var messageOnCalls = function (message) {
  * @param channel
  * @param message
  */
-var mentionOnCalls = function (channel, message) {
+var mentionOnCalls = function(channel, message) {
   var usersToMention = "";
-  getOnCallSlackers(function (slackers) {
-    _.each(slackers, function (slacker) {
+  getOnCallSlackers(function(slackers) {
+    _.each(slackers, function(slacker) {
       usersToMention += "<@" + (testUser || slacker) + "> ";
     });
     if (DEBUG_RUN) {
@@ -97,12 +94,12 @@ var mentionOnCalls = function (channel, message) {
  * @param postMessage
  * @param direct
  */
-var postMessage = function (obj, preMessage, postMessage, direct) {
+var postMessage = function(obj, preMessage, postMessage, direct) {
   var usersToMention = "";
   debug("getting oncalls");
-  getOnCallSlackers(function (slackers) {
+  getOnCallSlackers(function(slackers) {
     debug("got oncalls", slackers);
-    _.each(slackers, function (slacker) {
+    _.each(slackers, function(slacker) {
       usersToMention += "<@" + (testUser || slacker) + "> ";
     });
     var message = " " + usersToMention.trim() + " " + postMessage;
@@ -121,16 +118,16 @@ var postMessage = function (obj, preMessage, postMessage, direct) {
  *
  * @param callback
  */
-var cacheChannels = function (callback) {
+var cacheChannels = function(callback) {
   debug("Caching channels");
-  bot.getChannels().then(function (data) {
+  bot.getChannels().then(function(data) {
     async.each(
       data,
-      function (channel, cb) {
+      function(channel, cb) {
         // debug("channel: " , channel);
         cb();
       },
-      function (err) {
+      function(err) {
         if (err) {
           debug(err);
         } else {
@@ -146,26 +143,26 @@ var cacheChannels = function (callback) {
  *
  * @param callback
  */
-var cacheUsers = function (callback) {
-  bot.getUsers().then(function (data) {
+var cacheUsers = function(callback) {
+  bot.getUsers().then(function(data) {
     async.each(
       data.members,
-      function (user, each_cb) {
+      function(user, each_cb) {
         // debug("Caching user name/id: " + user.name);
 
         async.parallel(
           [
-            function (cb) {
+            function(cb) {
               cache.set(user.name, user, cacheInterval, cb);
             },
-            function (cb) {
+            function(cb) {
               cache.set("ID:" + user.id, user, cacheInterval, cb);
             },
           ],
           each_cb
         );
       },
-      function (err) {
+      function(err) {
         if (err) {
           debug(err);
           callback(err);
@@ -183,11 +180,11 @@ var cacheUsers = function (callback) {
  * @param channelId
  * @param callback
  */
-var getChannel = function (channelId, callback) {
-  cache.get("channels", function (err, channelObj) {
+var getChannel = function(channelId, callback) {
+  cache.get("channels", function(err, channelObj) {
     if (channelObj == undefined) {
       debug("undefined channels object");
-      cb = function (err, results) {
+      cb = function(err, results) {
         getChannel(channelId, callback);
       };
 
@@ -195,7 +192,7 @@ var getChannel = function (channelId, callback) {
     } else {
       debug(channelObj.channels.map((ch) => ch.id));
       debug(channelId);
-      var channel = _.find(channelObj.channels, function (channel) {
+      var channel = _.find(channelObj.channels, function(channel) {
         return channel.id == channelId;
       });
       callback(channel);
@@ -210,12 +207,12 @@ var getChannel = function (channelId, callback) {
  * @param value value to search by
  * @param callback
  */
-var getUser = function (findBy, value = "", callback) {
+var getUser = function(findBy, value = "", callback) {
   debug("getting user by", findBy, value);
   if (findBy == FIND_BY_EMAIL && value.indexOf("@") > 0) {
-    cache.get("users", function (err, userObj) {
+    cache.get("users", function(err, userObj) {
       if (userObj == undefined) {
-        cb = function (err, results) {
+        cb = function(err, results) {
           getUser(findBy, value, callback);
         };
 
@@ -224,7 +221,7 @@ var getUser = function (findBy, value = "", callback) {
         var member = undefined;
 
         if (findBy == FIND_BY_EMAIL) {
-          member = _.find(userObj.members, function (member) {
+          member = _.find(userObj.members, function(member) {
             return member.profile.email == value;
           });
         }
@@ -235,9 +232,9 @@ var getUser = function (findBy, value = "", callback) {
     findBy == FIND_BY_ID &&
     value.indexOf("U") == 0
   ) {
-    cache.get("ID:" + value, function (err, userObj) {
+    cache.get("ID:" + value, function(err, userObj) {
       if (userObj == undefined) {
-        cb = function (err, results) {
+        cb = function(err, results) {
           getUser(findBy, value, callback);
         };
 
@@ -248,11 +245,11 @@ var getUser = function (findBy, value = "", callback) {
     });
   } else if (
     findBy == FIND_BY_NAME &&
-    !(value.indexOf("U") == 0 )
+    !(value.indexOf("U") == 0)
   ) {
-    cache.get(value, function (err, userObj) {
+    cache.get(value, function(err, userObj) {
       if (userObj == undefined) {
-        cb = function (err, results) {
+        cb = function(err, results) {
           getUser(findBy, value, callback);
         };
 
@@ -268,20 +265,20 @@ var getUser = function (findBy, value = "", callback) {
  *
  * @param callback
  */
-var getOnCallSlackers = function (callback) {
+var getOnCallSlackers = function(callback) {
   var oncallSlackers = [];
   var oncallSlackerNames = [];
   debug("pre pagerduty.getOnCalls");
-  pagerDuty.getOnCalls(null, function (err, pdUsers) {
+  pagerDuty.getOnCalls(null, function(err, pdUsers) {
     debug("getOncalls callback");
     async.each(
       pdUsers,
-      function (pdUser, cb) {
+      function(pdUser, cb) {
         if (pdUser.user.name == undefined) {
           debug("...", pdUser);
           cb();
         } else {
-          getUser(FIND_BY_EMAIL, pdUser.user.email, function (err, slacker) {
+          getUser(FIND_BY_EMAIL, pdUser.user.email, function(err, slacker) {
             if (err) {
               debug("err", err);
             }
@@ -291,11 +288,11 @@ var getOnCallSlackers = function (callback) {
           });
         }
       },
-      function (err) {
+      function(err) {
         if (err) {
           debug(err);
         } else {
-          debug("got them all", oncallSlackerNames);
+          debug("got all oncalls:", oncallSlackerNames);
           callback(oncallSlackers);
         }
       }
@@ -303,47 +300,32 @@ var getOnCallSlackers = function (callback) {
   });
 };
 
-/**
- * TBD
- * @param channel
- * @param user
- * @param callback
- */
-var storeMention = function (channel, user, callback) {};
-
-/**
- * TBD
- * @param channel
- * @param user
- * @param callback
- */
-var clearStoredMention = function (channel, user, callback) {};
 
 /**
  *  Start the bot
  */
-bot.on("start", function () {
+bot.on("start", function() {
   async.series([
-    function (callback) {
+    function(callback) {
       cacheUsers(callback);
     },
-    function (callback) {
+    function(callback) {
       cacheChannels(callback);
     },
-    function (callback) {
+    function(callback) {
       getOnCallSlackers(callback);
     },
   ]);
 });
 
-bot.on("message", function (data) {
-  // all incoming events https://api.slack.com/rtm
+bot.on("message", function(data) {
+  // subscription for all incoming events https://api.slack.com/rtm
   if (data.type != "message") {
     // we don't care about everything else
     return;
   }
   debug("message", data.type, data);
-  var notABot = data.bot_id == undefined;
+  var isBot = data.bot_id != undefined;
   var message = data.text ? data.text.trim() : "";
 
   var botTag = "<@" + bot.self.id + ">";
@@ -355,7 +337,7 @@ bot.on("message", function (data) {
   if (botTagIndex <= 0 && message.indexOf("<@") == 0) {
     var userNameData = message.match(/^<@(.*?)>/g);
     username = userNameData && userNameData[0].replace(/[<@>]/g, "");
-    getUser(FIND_BY_NAME, username, function (err, user) {
+    getUser(FIND_BY_NAME, username, function(err, user) {
       if (user && user.is_bot) {
         botTag = "<@" + user.id + ">";
         enableBotBotComm = true;
@@ -365,10 +347,10 @@ bot.on("message", function (data) {
 
   // handle normal channel interaction
   if (
-    (notABot || data.bot_id != bot.self.id) &&
+    (!isBot || data.bot_id != bot.self.id) &&
     (botTagIndex >= 0 || enableBotBotComm)
   ) {
-    getChannel(data.channel, function (channel) {
+    getChannel(data.channel, function(channel) {
       debug("got channel", channel);
       if (channel) {
         debug("channel", channel);
@@ -393,8 +375,8 @@ bot.on("message", function (data) {
           }
         }
       } else {
-        debug("no channel");
-        getUser(FIND_BY_ID, data.user, function (err, user) {
+        debug("no channel but bot not tagged");
+        getUser(FIND_BY_ID, data.user, function(err, user) {
           if (err) {
             debug(err);
           } else {
@@ -406,15 +388,16 @@ bot.on("message", function (data) {
             } else if (message.match(VERSION_REGEX)) {
               // version command
               if (DEBUG_RUN) {
+                debug("debug run, not sending message");
                 // don't send message
               } else {
                 bot.postMessageToUser(
                   user.name,
                   "I am *" +
-                    pjson.name +
-                    "* and running version " +
-                    pjson.version +
-                    ".",
+                  pjson.name +
+                  "* and running version " +
+                  pjson.version +
+                  ".",
                   { icon_emoji: iconEmoji }
                 );
               }
@@ -436,11 +419,11 @@ bot.on("message", function (data) {
     });
   }
   // handle direct bot interaction
-  else if (notABot) {
-    getChannel(data.channel, function (channel) {
+  else if (!isBot) {
+    getChannel(data.channel, function(channel) {
       if (!channel) {
-        debug("no channel");
-        getUser(FIND_BY_ID, data.user, function (err, user) {
+        debug("no channel, expecting this to be a DM");
+        getUser(FIND_BY_ID, data.user, function(err, user) {
           if (err) {
             debug(err);
           } else {
@@ -456,10 +439,10 @@ bot.on("message", function (data) {
                 bot.postMessageToUser(
                   user.name,
                   "I am *" +
-                    pjson.name +
-                    "* and running version " +
-                    pjson.version +
-                    ".",
+                  pjson.name +
+                  "* and running version " +
+                  pjson.version +
+                  ".",
                   { icon_emoji: iconEmoji }
                 );
               }
