@@ -7,20 +7,21 @@ var oncallsParams = {
 };
 
 //
-var request = require("request");
-var async = require("async");
-var _ = require("underscore");
-var querystring = require("querystring");
-var debug = require("debug")("pagerduty");
-const NodeCache = require("node-cache");
+import request from "request";
+import async from "async";
+import _ from "underscore";
+import querystring from "querystring";
+import dbg from 'debug';
+import NodeCache from "node-cache";
 
+const debug = dbg("pagerduty");
 /**
  * params object:
  *   domain: String (required)
  *   token: String (required)
  *
  **/
-var PagerDuty = function(options) {
+const PagerDuty = function(options) {
   this.headers = {
     Accept: "application/vnd.pagerduty+json;version=2",
     "Content-Type": "application/json",
@@ -75,7 +76,7 @@ PagerDuty.prototype.getAllPaginatedData = function(options) {
     }
 
     _.each(items, function(item, _i) {
-      index = item.id || item[options.secondaryIndex].id;
+      let index = item.id || item[options.secondaryIndex].id;
       // only add oncalls with a schedule
       if (item.schedule) {
         if (options.sortBy) {
@@ -162,4 +163,4 @@ PagerDuty.prototype.getOnCalls = function(params, callback) {
   );
 };
 
-module.exports = PagerDuty;
+export default PagerDuty;
