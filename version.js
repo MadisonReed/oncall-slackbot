@@ -4,7 +4,7 @@ import config from 'config';
 
 const debug = dbg("version");
 const iconEmoji = config.get("slack.emoji");
-import { DEBUG_RUN } from "./oncall_bot.js";
+import { DEBUG_RUN } from "./index.js";
 const VERSION_REGEX = new RegExp("^[vV]ersion$");
 
 export const handle_version_cmd = (bot, user, message) => {

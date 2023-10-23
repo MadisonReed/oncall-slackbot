@@ -46,6 +46,9 @@ export default class SlackData {
       self.cache.get("users", (err, userObj) => {
         if (userObj == undefined) {
           const cb = (err, results) => {
+            if (err){
+              debug("err", err);
+            }
             self.getUser(findBy, value, callback);
           };
 
@@ -63,8 +66,14 @@ export default class SlackData {
       });
     } else if (findBy == FIND_BY_ID && value.indexOf("U") == 0) {
       self.cache.get("ID:" + value, (err, userObj) => {
+        if (err){
+          debug("err", err);
+        }
         if (userObj == undefined) {
           const cb = (err, results) => {
+            if (err){
+              debug("err", err);
+            }
             self.getUser(findBy, value, callback);
           };
 
@@ -75,8 +84,14 @@ export default class SlackData {
       });
     } else if (findBy == FIND_BY_NAME && !(value.indexOf("U") == 0)) {
       self.cache.get(value, (err, userObj) => {
+        if (err){
+          debug("err", err);
+        }
         if (userObj == undefined) {
           cb = (err, results) => {
+            if (err){
+              debug("err", err);
+            }
             self.getUser(findBy, value, callback);
           };
 

@@ -171,6 +171,53 @@ bot.on("message", (data) => {
   handle_message(data);
 });
 
+const handle_message = (message_data) => {
+  // subscription for all incoming events https://api.slack.com/rtm
+  //
+  if (message_data.type != "message") {
+    // we don't care about everything else
+    return;
+  }
+  var isBot = message_data.bot_id != undefined;
+  if (isBot) {
+    // don't handle bot-bot communication or messages coming from this bot
+    debug("bot message, skipping");
+    return;
+  }
+
+  debug("message", message_data.type, message_data);
+
+  var botTag = "<@" + bot.self.id + ">";
+  var message = message_data.text ? message_data.text.trim() : "";
+  var botTagIndex = message.indexOf(botTag);
+
+  // the bot may have been mentioned by username (not id). check if that's the case
+  var username = "";
+  var enableBotBotComm = false;
+  if (botTagIndex <= 0 && message.indexOf("<@") == 0) {
+    var userNameData = message.match(/^<@(.*?)>/g);
+    username = userNameData && userNameData[0].replace(/[<@>]/g, "");
+    slackdata.getUser(FIND_BY_NAME, username, (err, user) => {
+      if (err) {
+        debug("error getting user:", err);
+      }
+      if (user && user.is_bot) {
+        botTag = "<@" + user.id + ">";
+        enableBotBotComm = true;
+      }
+    });
+  }
+
+  // handle non-DM channel interaction
+  if (botTagIndex >= 0 || enableBotBotComm) {
+    handle_channel_message(message_data);
+  }
+  // handle direct bot interaction
+  else {
+    handle_dm(message_data);
+  }
+};
+
 const handle_channel_message = (message_data) => {
   debug("public channel interaction");
   var message = message_data.text ? message_data.text.trim() : "";
@@ -236,47 +283,4 @@ const handle_dm = (message_data) => {
       });
     }
   });
-};
-
-const handle_message = (message_data) => {
-  // subscription for all incoming events https://api.slack.com/rtm
-  if (message_data.type != "message") {
-    // we don't care about everything else
-    return;
-  }
-  var isBot = message_data.bot_id != undefined;
-  if (isBot) {
-    // don't handle bot-bot communication
-    debug("bot message, skipping");
-    return;
-  }
-
-  debug("message", message_data.type, message_data);
-
-  var botTag = "<@" + bot.self.id + ">";
-  var message = message_data.text ? message_data.text.trim() : "";
-  var botTagIndex = message.indexOf(botTag);
-
-  // the bot may have been mentioned by username (not id). check if that's the case
-  var username = "";
-  var enableBotBotComm = false;
-  if (botTagIndex <= 0 && message.indexOf("<@") == 0) {
-    var userNameData = message.match(/^<@(.*?)>/g);
-    username = userNameData && userNameData[0].replace(/[<@>]/g, "");
-    slackdata.getUser(FIND_BY_NAME, username, (err, user) => {
-      if (user && user.is_bot) {
-        botTag = "<@" + user.id + ">";
-        enableBotBotComm = true;
-      }
-    });
-  }
-
-  // handle non-DM channel interaction
-  if (botTagIndex >= 0 || enableBotBotComm) {
-    handle_channel_message(message_data);
-  }
-  // handle direct bot interaction
-  else {
-    handle_dm(message_data);
-  }
 };

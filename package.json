@@ -6,7 +6,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "bun oncall_bot.js"
+    "start": "bun index.js"
   },
   "engines": {
     "node": "4.4.6",
