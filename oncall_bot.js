@@ -6,10 +6,10 @@
 const DEBUG_RUN = process.env.DEBUG_RUN || false;
 export { DEBUG_RUN };
 
-import config from 'config';
+import config from "config";
 import async from "async";
-import {handle_version }from "./version.js";
-import dbg from 'debug';
+import { handle_version_cmd } from "./version.js";
+import dbg from "debug";
 import _ from "underscore";
 import SlackBot from "slackbots";
 import NodeCache from "node-cache";
@@ -89,7 +89,7 @@ var mentionOnCalls = function (channel, message) {
 };
 
 /**
- * Post message with reference to on call peeps
+ * Post message with reference to oncall peeps
  *
  * @param obj
  * @param preMessage
@@ -186,7 +186,7 @@ var getChannel = function (channelId, callback) {
   cache.get("channels", function (err, channelObj) {
     if (channelObj == undefined) {
       debug("undefined channels object");
-      cb = function (err, results) {
+      const cb = function (err, results) {
         getChannel(channelId, callback);
       };
 
@@ -214,7 +214,7 @@ var getUser = function (findBy, value = "", callback) {
   if (findBy == FIND_BY_EMAIL && value.indexOf("@") > 0) {
     cache.get("users", function (err, userObj) {
       if (userObj == undefined) {
-        cb = function (err, results) {
+        const cb = function (err, results) {
           getUser(findBy, value, callback);
         };
 
@@ -233,7 +233,7 @@ var getUser = function (findBy, value = "", callback) {
   } else if (findBy == FIND_BY_ID && value.indexOf("U") == 0) {
     cache.get("ID:" + value, function (err, userObj) {
       if (userObj == undefined) {
-        cb = function (err, results) {
+        const cb = function (err, results) {
           getUser(findBy, value, callback);
         };
 
@@ -257,7 +257,7 @@ var getUser = function (findBy, value = "", callback) {
   }
 };
 /**
- * Return who's on call.
+ * Return who is oncall.
  *
  * @param callback
  */
@@ -277,9 +277,12 @@ var getOnCallSlackers = function (callback) {
           getUser(FIND_BY_EMAIL, pdUser.user.email, function (err, slacker) {
             if (err) {
               debug("err", err);
+            } else if (!slacker) {
+              debug("user doesn't have a slack id");
+            } else {
+              oncallSlackers.push(slacker.id);
+              oncallSlackerNames.push(slacker.name);
             }
-            oncallSlackers.push(slacker.id);
-            oncallSlackerNames.push(slacker.name);
             cb();
           });
         }
@@ -361,7 +364,7 @@ bot.on("message", function (data) {
           mentionOnCalls(channel.name, "get in here! :point_up_2:");
         } else {
           // default
-          preText = (data.user ? " <@" + data.user + ">" : botTag) + ' said _"';
+          let preText = (data.user ? " <@" + data.user + ">" : botTag) + ' said _"';
           if (botTagIndex == 0) {
             mentionOnCalls(
               channel.name,
@@ -384,7 +387,6 @@ bot.on("message", function (data) {
           if (err) {
             debug(err);
           } else {
-            debug(message);
             handle_version_cmd(bot, user, message);
             // handle_who_cmd(bot, user, message);
             if (message.match(WHO_REGEX)) {
