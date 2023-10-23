@@ -12,7 +12,6 @@ const FIND_BY_ID = 0;
 const FIND_BY_EMAIL = 1;
 const FIND_BY_NAME = 2;
 
-const cacheInterval = config.get("slack.cache_interval_seconds");
 
 export const bot = new SlackBot({
   token: config.get("slack.slack_token"), // Add a bot https://my.slack.com/services/new/bot and put the token
@@ -23,9 +22,15 @@ export default class SlackData {
   constructor() {
     debug("oncall service constructor");
     this.cache = new NodeCache();
-    var cacheInterval = config.get("slack.cache_interval_seconds");
-    this.cacheUsers(() => {});
+    this.cacheInterval = config.get("slack.cache_interval_seconds");
   }
+
+  async warmCaches(){
+    debug("warming caches");
+    this.cacheUsers(() => {});
+    this.cacheChannels(() => {});
+  }
+
 
   /**
    * Just get the users.
@@ -84,6 +89,39 @@ export default class SlackData {
   };
 
   /**
+   * Get a channel by id
+   *
+   * @param channelId
+   * @param callback
+   */
+  getChannel = (channelId, callback) => {
+    const self = this;
+    debug("getting cached channels");
+    self.cache.get("channels", (err, channelObj) => {
+      if (err) {
+        debug("err:", err);
+      }
+      if (channelObj == undefined) {
+        debug("undefined channels object");
+        const cb = (err, results) => {
+          if (err) {
+            debug("err:", err);
+          }
+          getChannel(channelId, callback);
+        };
+
+        self.cacheChannels(cb);
+      } else {
+        debug("finding channel");
+        var channel = _.find(channelObj.channels, (channel) => {
+          return channel.id == channelId;
+        });
+        callback(channel);
+      }
+    });
+  };
+
+  /**
    * Get the users and cache 'em.
    *
    * @param callback
@@ -103,10 +141,10 @@ export default class SlackData {
             async.parallel(
               [
                 (cb) => {
-                  self.cache.set(user.name, user, cacheInterval, cb);
+                  self.cache.set(user.name, user, self.cacheInterval, cb);
                 },
                 (cb) => {
-                  self.cache.set("ID:" + user.id, user, cacheInterval, cb);
+                  self.cache.set("ID:" + user.id, user, self.cacheInterval, cb);
                 },
               ],
               each_cb
@@ -117,7 +155,7 @@ export default class SlackData {
               debug("err", err);
               callback(err);
             } else {
-              callback(self.cache.set("users", data, cacheInterval));
+              callback(self.cache.set("users", data, self.cacheInterval));
             }
           }
         );
@@ -125,5 +163,30 @@ export default class SlackData {
       .catch((err) => {
         debug("err from cacheUsers", err);
       });
+  };
+
+  /**
+   * Get the channels and cache 'em
+   *
+   * @param callback
+   */
+  cacheChannels = (callback) => {
+    const self = this;
+    debug("Caching channels");
+    bot.getChannels().then((data) => {
+      async.each(
+        data,
+        (_channel, cb) => {
+          cb();
+        },
+        (err) => {
+          if (err) {
+            debug("err", err);
+          } else {
+            self.cache.set("channels", data, self.cacheInterval, callback);
+          }
+        }
+      );
+    });
   };
 }

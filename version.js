@@ -2,7 +2,7 @@ import pjson from "./package.json" assert { type: "json" };
 import dbg from "debug";
 import config from 'config';
 
-const debug = dbg("pagerduty");
+const debug = dbg("version");
 const iconEmoji = config.get("slack.emoji");
 import { DEBUG_RUN } from "./oncall_bot.js";
 const VERSION_REGEX = new RegExp("^[vV]ersion$");
@@ -19,9 +19,11 @@ export const handle_version_cmd = (bot, user, message) => {
         "I am *" + pjson.name + "* and running version " + pjson.version + ".",
         { icon_emoji: iconEmoji },
         (res)=>{
-          debug(res);
           if (res.error){
             debug(res.error);
+            if (res.error == "ratelimited"){
+              console.error("ERROR: rate limited request");
+            }
           }
         }
       );

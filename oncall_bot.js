@@ -40,7 +40,7 @@ const WHO_REGEX = new RegExp("^[wW]ho$");
 
 const slackdata = new SlackData();
 
-const getOnCallSlackers = (callback) => {
+const getOncallSlackers = (callback) => {
   var oncallSlackers = [];
   var oncallSlackerNames = [];
   debug("pre pagerduty.getOnCalls");
@@ -88,7 +88,7 @@ const getOnCallSlackers = (callback) => {
  * @param message
  */
 var messageOnCalls = (message) => {
-  getOnCallSlackers((slackers) => {
+  getOncallSlackers((slackers) => {
     _.each(slackers, (slacker) => {
       debug("POST MESSAGE TO: " + slacker, message);
       if (DEBUG_RUN) {
@@ -110,7 +110,7 @@ var messageOnCalls = (message) => {
  */
 var mentionOnCalls = (channel, message) => {
   var usersToMention = "";
-  getOnCallSlackers((slackers) => {
+  getOncallSlackers((slackers) => {
     _.each(slackers, (slacker) => {
       usersToMention += "<@" + (testUser || slacker) + "> ";
     });
@@ -139,7 +139,7 @@ var mentionOnCalls = (channel, message) => {
 const postMessage = (obj, preMessage, postMessage, direct) => {
   var usersToMention = "";
   debug("getting oncalls");
-  getOnCallSlackers((slackers) => {
+  getOncallSlackers((slackers) => {
     debug("got oncalls", slackers);
     _.each(slackers, (slacker) => {
       usersToMention += "<@" + (testUser || slacker) + "> ";
@@ -156,72 +156,13 @@ const postMessage = (obj, preMessage, postMessage, direct) => {
 };
 
 /**
- * Get the channels and cache 'em
- *
- * @param callback
- */
-var cacheChannels = (callback) => {
-  debug("Caching channels");
-  bot.getChannels().then((data) => {
-    async.each(
-      data,
-      (channel, cb) => {
-        // debug("channel: " , channel);
-        cb();
-      },
-      (err) => {
-        if (err) {
-          debug("err", err);
-        } else {
-          cache.set("channels", data, cacheInterval, callback);
-        }
-      }
-    );
-  });
-};
-
-/**
- * Get a channel by id
- *
- * @param channelId
- * @param callback
- */
-var getChannel = (channelId, callback) => {
-  debug("getting cached channels");
-  cache.get("channels", (err, channelObj) => {
-    if (err) {
-      debug("err:", err);
-    }
-    if (channelObj == undefined) {
-      debug("undefined channels object");
-      const cb = (err, results) => {
-        if (err) {
-          debug("err:", err);
-        }
-        getChannel(channelId, callback);
-      };
-
-      cacheChannels(cb);
-    } else {
-      debug("finding channel");
-      var channel = _.find(channelObj.channels, (channel) => {
-        return channel.id == channelId;
-      });
-      callback(channel);
-    }
-  });
-};
-
-/**
  *  Start the bot
  */
 bot.on("start", () => {
+  slackdata.warmCaches();
   async.series([
     (callback) => {
-      cacheChannels(callback);
-    },
-    (callback) => {
-      getOnCallSlackers(callback);
+      getOncallSlackers(callback);
     },
   ]);
 });
@@ -233,7 +174,7 @@ bot.on("message", (data) => {
 const handle_channel_message = (message_data) => {
   debug("public channel interaction");
   var message = message_data.text ? message_data.text.trim() : "";
-  getChannel(message_data.channel, (channel) => {
+  slackdata.getChannel(message_data.channel, (channel) => {
     debug("got channel", channel);
     if (channel) {
       debug("channel", channel);
@@ -266,7 +207,7 @@ const handle_channel_message = (message_data) => {
 const handle_dm = (message_data) => {
   debug("no channel, expecting this to be a DM");
   var message = message_data.text ? message_data.text.trim() : "";
-  getChannel(message_data.channel, (channel) => {
+  slackdata.getChannel(message_data.channel, (channel) => {
     debug("channel", channel, "should be 'undefined' (DM)");
     if (!channel) {
       slackdata.getUser(FIND_BY_ID, message_data.user, (err, user) => {
