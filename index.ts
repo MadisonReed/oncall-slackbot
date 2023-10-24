@@ -6,16 +6,16 @@
 const DEBUG_RUN = process.env.DEBUG_RUN || false;
 export { DEBUG_RUN };
 
-import PagerDuty from "./pagerduty.js";
+import PagerDuty from "./pagerduty.ts";
 import config from "config";
-import { bot, bot_tag } from "./slack/bot.js";
+import { bot, bot_tag } from "./slack/bot.ts";
 import async from "async";
-import { handleVersionCmd } from "./version.js";
+import { handleVersionCmd } from "./version.ts";
 import dbg from "debug";
 import _ from "underscore";
 import NodeCache from "node-cache";
-import SlackData from "./slack/data.js";
-import { handleOncallMention } from "./slack/message.js";
+import SlackData from "./slack/data.ts";
+import { handleOncallMention } from "./slack/message.ts";
 
 const debug = dbg("oncall_bot");
 
@@ -216,7 +216,7 @@ const handleMessage = (message_data) => {
 const handleChannelMessage = (channel, message_data) =>{
   var message = message_data.text ? message_data.text.trim() : "";
   debug(message);
-  handleOncallMention(['pesui'], message);
+  handleOncallMention(pagerDuty, ['pesui'], message);
 }
 
 const handleBotCommands = (channel, message_data) => {

@@ -1,21 +1,31 @@
 import dbg from "debug";
 import config from "config";
+import async from 'async';
 
 const debug = dbg("slackMessage");
-const oncall_map = config.get("pagerduty.oncall_map");
+const oncallMap = config.get("pagerduty.oncall_map");
 
-export const handleOncallMention = (oncalls, message) => {
-  debug("oncalls", oncalls, "message", message);
+const oncallFromMessage = (message) => {
+  const allowedOncalls = Object.keys(oncallMap);
   // extract mentioned shortname
-  let oncallMentioned = oncalls.find((oncall) =>
+  let oncallMentioned = allowedOncalls.find((oncall) =>
     message.includes(`@${oncall}`)
   );
   // get the full name from that
-  const fullname = oncall_map[oncallMentioned];
+  const fullname = oncallMap[oncallMentioned];
   debug("oncall mentioned was", fullname);
+  return fullname;
+};
+
+export const handleOncallMention = (pagerDuty, oncalls, message) => {
+  debug("oncalls", oncalls, "message", message);
+  const oncallName = oncallFromMessage(message);
   // get the current oncall for this shift
+
+  
+
   pagerDuty.getOnCalls(null, (err, pdUsers) => {
-    if (err){
+    if (err) {
       debug("err", err);
     }
     debug("getOncalls callback");

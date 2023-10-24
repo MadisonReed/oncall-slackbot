@@ -1,11 +1,11 @@
 import pjson from "./package.json" assert { type: "json" };
 import dbg from "debug";
 import config from "config";
-import { bot_tag } from "./slack/bot.js";
+import { bot_tag } from "./slack/bot.ts";
 
 const debug = dbg("version");
 const iconEmoji = config.get("slack.emoji");
-import { DEBUG_RUN } from "./index.js";
+import { DEBUG_RUN } from "./index.ts";
 
 export const handleVersionCmd = (bot, channel, user, message) => {
   const VERSION_REGEX = new RegExp(`^(${bot_tag()}:? )?version$`);
