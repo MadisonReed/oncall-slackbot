@@ -24,5 +24,8 @@
   "repository": {
     "type": "git",
     "url": "git://github.com/MadisonReed/oncall-slackbot.git"
+  },
+  "devDependencies": {
+    "bun-types": "^1.0.7"
   }
 }

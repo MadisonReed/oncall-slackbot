@@ -13,15 +13,10 @@ import async from "async";
 import { handleVersionCmd } from "./version.ts";
 import dbg from "debug";
 import _ from "underscore";
-import NodeCache from "node-cache";
 import SlackData from "./slack/data.ts";
 import { handleOncallMention } from "./slack/message.ts";
 
 const debug = dbg("oncall_bot");
-
-const cache = new NodeCache();
-const cacheInterval = config.get("slack.cache_interval_seconds");
-const nextInQueueInterval = config.get("slack.next_in_queue_interval");
 
 // get pagerduty integration
 const pagerDuty = new PagerDuty(config.get("pagerduty"));
@@ -42,13 +37,13 @@ const WHO_REGEX = new RegExp("^[wW]ho$");
 
 const slackdata = new SlackData(bot);
 
-const getOncallSlackers = (callback) => {
+const getOncallSlackers = (callback: ([]) => void): void => {
   var oncallSlackers = [];
   var oncallSlackerNames = [];
   debug("pre pagerduty.getOnCalls");
   pagerDuty.getOnCalls(null, (err, pdUsers) => {
     debug("getOncalls callback");
-    if (err){
+    if (err) {
       debug("err", err);
     }
     async.each(
@@ -213,11 +208,11 @@ const handleMessage = (message_data) => {
   });
 };
 
-const handleChannelMessage = (channel, message_data) =>{
+const handleChannelMessage = (channel, message_data) => {
   var message = message_data.text ? message_data.text.trim() : "";
   debug(message);
-  handleOncallMention(pagerDuty, ['pesui'], message);
-}
+  handleOncallMention(pagerDuty, ["pesui"], message);
+};
 
 const handleBotCommands = (channel, message_data) => {
   debug("public channel interaction");
