@@ -15,6 +15,21 @@ import dbg from "debug";
 import NodeCache from "node-cache";
 
 const debug = dbg("pagerduty");
+
+export interface PdUser {
+  name: string;
+  email: string;
+}
+
+interface PdSchedule {
+  id: string;
+}
+
+export interface PdOncallResult {
+  user: PdUser;
+  schedule: PdSchedule;
+}
+
 /**
  * params object:
  *   domain: String (required)
@@ -34,15 +49,14 @@ class PagerDuty {
     this.cacheInterval = options.cache_interval_seconds;
   }
 
-  getAllPaginatedData(options) {
+  getAllPaginatedData(options): void {
     debug("getAllPaginatedData");
     options.params = options.params || {};
     options.params.limit = 100; // 100 is the max limit allowed by pagerduty
     options.params.offset = 0;
 
     var total = null,
-      items = [],
-      items_map = {},
+      items: PdOncallResult[] = [],
       self = this,
       requestOptions = {
         headers: self.headers,
@@ -76,19 +90,14 @@ class PagerDuty {
         });
       }
 
-      _.each(items, function (item, _i) {
+      items = items.filter((item, _i) => {
         let index = item.id || item[options.secondaryIndex].id;
         // only add oncalls with a schedule
-        if (item.schedule) {
-          if (options.sortBy) {
-            index = item[options.sortBy] + "-" + index;
-          }
-          items_map[index] = item;
-        }
+        return item.schedule || false;
       });
 
       if (options.params.offset >= total) {
-        options.callback(error, items_map);
+        options.callback(error, items);
       } else {
         requestAnotherPage();
       }
@@ -115,58 +124,59 @@ class PagerDuty {
     requestAnotherPage();
   }
 
-  getOnCalls(params, callback) {
-    debug("pagerduty.getOnCalls");
-    var options = {
-      contentIndex: "oncalls",
-      secondaryIndex: "user",
-      sortBy: "escalation_level",
-      uri: "/oncalls",
-      callback: callback,
-      params: params || oncallsParams,
-    };
-    var self = this;
-    async.auto(
-      {
-        getCacheData: function (cb) {
-          debug("getCacheData");
-          self.cache.get(options.contentIndex, cb);
+  getOnCalls(params): PdOncallResult {
+    return new Promise<PdOncallResult>((resolve, reject) => {
+      debug("pagerduty.getOnCalls");
+      var options = {
+        contentIndex: "oncalls",
+        secondaryIndex: "user",
+        uri: "/oncalls",
+        callback: resolve,
+        params: params || oncallsParams,
+      };
+      var self = this;
+      async.auto(
+        {
+          getCacheData: function (cb) {
+            debug("getCacheData");
+            self.cache.get(options.contentIndex, cb);
+          },
+          checkCacheData: [
+            "getCacheData",
+            function (results, cb) {
+              debug("checkCacheData");
+              if (results.getCacheData == undefined) {
+                options.callback = cb;
+                self.getAllPaginatedData(options);
+              } else {
+                resolve(results.getCacheData);
+              }
+            },
+          ],
+          setCacheData: [
+            "checkCacheData",
+            function (results, cb) {
+              debug("setCacheData");
+              var cacheableResult = results.checkCacheData;
+              self.cache.set(
+                options.contentIndex,
+                cacheableResult,
+                self.cacheInterval,
+                cb(null, cacheableResult)
+              );
+            },
+          ],
         },
-        checkCacheData: [
-          "getCacheData",
-          function (results, cb) {
-            debug("checkCacheData");
-            if (results.getCacheData == undefined) {
-              options.callback = cb;
-              self.getAllPaginatedData(options);
-            } else {
-              callback(null, results.getCacheData);
-            }
-          },
-        ],
-        setCacheData: [
-          "checkCacheData",
-          function (results, cb) {
-            debug("setCacheData");
-            var cacheableResult = results.checkCacheData;
-            self.cache.set(
-              options.contentIndex,
-              cacheableResult,
-              self.cacheInterval,
-              cb(null, cacheableResult)
-            );
-          },
-        ],
-      },
-      function (err, result) {
-        if (err) {
-          debug("err:", err);
+        function (err, result) {
+          if (err) {
+            debug("err:", err);
+          }
+          Bun.write("/tmp/bun_out", JSON.stringify(result.setCacheData));
+          resolve(result.setCacheData);
         }
-        callback(null, result.setCacheData);
-      }
-    );
+      );
+    });
   }
 }
 
 export default PagerDuty;
-

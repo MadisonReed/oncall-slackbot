@@ -6,7 +6,7 @@
 const DEBUG_RUN = process.env.DEBUG_RUN || false;
 export { DEBUG_RUN };
 
-import PagerDuty from "./pagerduty.ts";
+import PagerDuty, { PdOncallResult } from "./pagerduty.ts";
 import config from "config";
 import { bot, bot_tag } from "./slack/bot.ts";
 import async from "async";
@@ -37,49 +37,53 @@ const WHO_REGEX = new RegExp("^[wW]ho$");
 
 const slackdata = new SlackData(bot);
 
-const getOncallSlackers = (callback: ([]) => void): void => {
-  var oncallSlackers = [];
-  var oncallSlackerNames = [];
+interface OncallSlackUser {
+  name: string;
+  email: string;
+  pdId: string;
+  pdScheduleId: string;
+}
+
+const getOncallSlackers = async (callback: ([]) => void): void => {
+  debug("getting oncall slack users");
+  var oncallSlackers: string[] = [];
+  var oncallSlackerNames: string[] = [];
   debug("pre pagerduty.getOnCalls");
-  pagerDuty.getOnCalls(null, (err, pdUsers) => {
-    debug("getOncalls callback");
-    if (err) {
-      debug("err", err);
-    }
-    async.each(
-      pdUsers,
-      (pdUser, cb) => {
-        if (pdUser.user.name == undefined) {
-          debug("...", pdUser);
-          cb();
-        } else {
-          slackdata.getUser(
-            FIND_BY_EMAIL,
-            pdUser.user.email,
-            (err, slacker) => {
-              if (err) {
-                debug("err", err);
-              } else if (!slacker) {
-                debug("user doesn't have a slack id");
-              } else {
-                oncallSlackers.push(slacker.id);
-                oncallSlackerNames.push(slacker.name);
-              }
-              cb();
+  const pdUsers: PdOncallResult = await pagerDuty.getOnCalls(null);
+  debug("getOncalls callback");
+  async.each(
+    pdUsers,
+    (pdUser: PdOncallResult, cb) => {
+      if (pdUser.user.name == undefined) {
+        debug("...", pdUser);
+        cb();
+      } else {
+        slackdata.getUser(
+          FIND_BY_EMAIL,
+          pdUser.user.email,
+          (err: any, slacker) => {
+            if (err) {
+              debug("err", err);
+            } else if (!slacker) {
+              debug("user doesn't have a slack id");
+            } else {
+              oncallSlackers.push(slacker.id);
+              oncallSlackerNames.push(slacker.name);
             }
-          );
-        }
-      },
-      (err) => {
-        if (err) {
-          debug("err", err);
-        } else {
-          debug("got all oncalls:", oncallSlackerNames);
-          callback(oncallSlackers);
-        }
+            cb();
+          }
+        );
       }
-    );
-  });
+    },
+    (err) => {
+      if (err) {
+        debug("err", err);
+      } else {
+        debug("got all oncalls:", oncallSlackerNames);
+        callback(oncallSlackers);
+      }
+    }
+  );
 };
 
 /**
