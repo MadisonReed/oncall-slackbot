@@ -124,8 +124,8 @@ class PagerDuty {
     requestAnotherPage();
   }
 
-  getOnCalls(params): PdOncallResult {
-    return new Promise<PdOncallResult>((resolve, reject) => {
+  getOnCalls(params): Promise<PdOncallResult[]> {
+    return new Promise<PdOncallResult[]>((resolve, reject) => {
       debug("pagerduty.getOnCalls");
       var options = {
         contentIndex: "oncalls",

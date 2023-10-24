@@ -18,6 +18,11 @@ import { handleOncallMention } from "./slack/message.ts";
 
 const debug = dbg("oncall_bot");
 
+type standardCallback = (
+  err?: Error | null | undefined,
+  result?: unknown
+) => void;
+
 // get pagerduty integration
 const pagerDuty = new PagerDuty(config.get("pagerduty"));
 
@@ -37,19 +42,36 @@ const WHO_REGEX = new RegExp("^[wW]ho$");
 
 const slackdata = new SlackData(bot);
 
-interface OncallSlackUser {
+class OncallSlackUser {
   name: string;
   email: string;
   pdId: string;
   pdScheduleId: string;
+  slackId: string;
+
+  constructor(
+    name: string,
+    email: string,
+    pdId: string,
+    pdScheduleId: string,
+    slackId: string
+  ) {
+    this.name = name;
+    this.email = email;
+    this.pdId = pdId;
+    this.pdScheduleId = pdScheduleId;
+    this.slackId = slackId;
+  }
 }
 
-const getOncallSlackers = async (callback: ([]) => void): void => {
+const getOncallSlackers = async (
+  callback: ((oncallUsers: OncallSlackUser[]) => void) | standardCallback
+) => {
   debug("getting oncall slack users");
-  var oncallSlackers: string[] = [];
+  var oncallSlackers: OncallSlackUser[] = [];
   var oncallSlackerNames: string[] = [];
   debug("pre pagerduty.getOnCalls");
-  const pdUsers: PdOncallResult = await pagerDuty.getOnCalls(null);
+  const pdUsers: PdOncallResult[] = await pagerDuty.getOnCalls(null);
   debug("getOncalls callback");
   async.each(
     pdUsers,
@@ -67,7 +89,16 @@ const getOncallSlackers = async (callback: ([]) => void): void => {
             } else if (!slacker) {
               debug("user doesn't have a slack id");
             } else {
-              oncallSlackers.push(slacker.id);
+              oncallSlackers.push(
+                new OncallSlackUser(
+                  pdUser.user.name,
+                  pdUser.user.email,
+                  pdUser.id,
+                  pdUser.schedule.id,
+                  slacker.id
+                )
+              );
+              // oncallSlackers.push(slacker.id);
               oncallSlackerNames.push(slacker.name);
             }
             cb();
@@ -91,14 +122,14 @@ const getOncallSlackers = async (callback: ([]) => void): void => {
  *
  * @param message
  */
-var messageOnCalls = (message) => {
-  getOncallSlackers((slackers) => {
-    _.each(slackers, (slacker) => {
+var messageOnCalls = (message: string) => {
+  getOncallSlackers((oncallUsers:OncallSlackUser[]) => {
+    _.each(oncallUsers, (slacker: OncallSlackUser) => {
       debug("POST MESSAGE TO: " + slacker, message);
       if (DEBUG_RUN) {
         // don't send message
       } else {
-        bot.postMessageToUser(testUser || slacker, message, {
+        bot.postMessageToUser(testUser || slacker.slackId, message, {
           icon_emoji: iconEmoji,
         });
       }
@@ -112,11 +143,11 @@ var messageOnCalls = (message) => {
  * @param channel
  * @param message
  */
-var mentionOnCalls = (channel, message) => {
+var mentionOnCalls = (channel, message: string) => {
   var usersToMention = "";
-  getOncallSlackers((slackers) => {
-    _.each(slackers, (slacker) => {
-      usersToMention += "<@" + (testUser || slacker) + "> ";
+  getOncallSlackers((oncallUsers:OncallSlackUser[]) => {
+    _.each(oncallUsers, (slacker: OncallSlackUser) => {
+      usersToMention += "<@" + (testUser || slacker.slackId) + "> ";
     });
     if (DEBUG_RUN) {
       // don't send message
@@ -143,10 +174,13 @@ var mentionOnCalls = (channel, message) => {
 const postMessage = (obj, preMessage, postMessage, direct) => {
   var usersToMention = "";
   debug("getting oncalls");
-  getOncallSlackers((slackers) => {
-    debug("got oncalls", slackers);
-    _.each(slackers, (slacker) => {
-      usersToMention += "<@" + (testUser || slacker) + "> ";
+  getOncallSlackers((oncallUsers: OncallSlackUser[]) => {
+    debug(
+      "got oncalls",
+      oncallUsers.map((s: OncallSlackUser) => s.name)
+    );
+    _.each(oncallUsers, (slacker: OncallSlackUser) => {
+      usersToMention += "<@" + (testUser || slacker.slackId) + "> ";
     });
     var message = " " + usersToMention.trim() + " " + postMessage;
     if (DEBUG_RUN) {
