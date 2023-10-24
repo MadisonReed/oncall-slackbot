@@ -18,7 +18,6 @@ export const handle_version_cmd = (bot, channel, user, message) => {
       debug("posting version to channel");
       bot.postMessage(
         channel,
-        "",
         "I am *" + pjson.name + "* and running version " + pjson.version + ".",
         false
       );
@@ -40,4 +39,5 @@ export const handle_version_cmd = (bot, channel, user, message) => {
     }
     return true;
   }
+  return false;
 };

@@ -15,6 +15,7 @@ import dbg from "debug";
 import _ from "underscore";
 import NodeCache from "node-cache";
 import SlackData from "./slack/data.js";
+import { handleOncallMention } from "./slack/message.js";
 
 const debug = dbg("oncall_bot");
 
@@ -148,6 +149,7 @@ const postMessage = (obj, preMessage, postMessage, direct) => {
     var message = " " + usersToMention.trim() + " " + postMessage;
     if (DEBUG_RUN) {
       // dry run
+      debug("would post to user", message);
     } else if (direct) {
       bot.postMessageToUser(obj, message, { icon_emoji: iconEmoji });
     } else {
@@ -191,76 +193,84 @@ const handle_message = (message_data) => {
   var message = message_data.text ? message_data.text.trim() : "";
   var botTagIndex = message.indexOf(bot_tag());
 
-  // handle non-DM channel interaction
-  if (botTagIndex >= 0) {
-    handle_channel_message(message_data);
-  }
-  // handle direct bot interaction
-  else {
-    handle_dm(message_data);
-  }
-};
-
-const handle_channel_message = (message_data) => {
-  debug("public channel interaction");
-  var message = message_data.text ? message_data.text.trim() : "";
   slackdata.getChannel(message_data.channel, (channel) => {
-    debug("got channel", channel);
-    if (channel) {
-      debug("channel", channel);
-      if (handle_version_cmd(bot, message_data.channel, null, message)) {
-        debug("version cmd");
-      } else if (message.match(new RegExp("^" + bot_tag() + ":? who$"))) {
-        debug("who command");
-        // who command
-        postMessage(message_data.channel, "", "are the humans OnCall.", false);
-      } else if (message.match(new RegExp("^" + bot_tag() + ":?$"))) {
-        // need to support mobile which adds : after a mention
-        mentionOnCalls(channel.name, "get in here! :point_up_2:");
-      } else {
-        // default
-        let preText =
-          (message_data.user ? " <@" + message_data.user + ">" : bot_tag()) +
-          ' said _"';
-        mentionOnCalls(
-          channel.name,
-          preText + message.substr(bot_tag().length + 1) + '_"'
-        );
-      }
+    // handle non-DM channel interaction
+    if (botTagIndex >= 0) {
+      // first handle mentions of the bot itself
+      // (bot commands)
+      handle_bot_commands(channel, message_data);
+    } else if (channel) {
+      // handle non-mentions in channels with the bot
+      // including mentions of other oncalls
+      handle_channel_message(channel, message_data);
+    } else {
+      // handle DMs with the bot
+      handle_dm(message_data);
     }
   });
 };
 
-const handle_dm = (message_data) => {
-  debug("no channel, expecting this to be a DM");
+const handle_channel_message = (channel, message_data) =>{
   var message = message_data.text ? message_data.text.trim() : "";
-  slackdata.getChannel(message_data.channel, (channel) => {
-    debug("channel", channel, "should be 'undefined' (DM)");
-    if (!channel) {
-      slackdata.getUser(FIND_BY_ID, message_data.user, (err, user) => {
-        if (err) {
-          debug("err", err);
+  debug(message);
+  handleOncallMention(['pesui'], message);
+}
+
+const handle_bot_commands = (channel, message_data) => {
+  debug("public channel interaction");
+  var message = message_data.text ? message_data.text.trim() : "";
+  debug("got channel", channel);
+  if (channel) {
+    debug("channel", channel);
+    getOncallSlackers((slackers) => {
+      handleOncallMention(slackers, message);
+    });
+    if (handle_version_cmd(bot, message_data.channel, null, message)) {
+      debug("version cmd");
+    } else if (message.match(new RegExp("^" + bot_tag() + ":? who$"))) {
+      debug("who command");
+      // who command
+      postMessage(message_data.channel, "", "are the humans OnCall.", false);
+    } else if (message.match(new RegExp("^" + bot_tag() + ":?$"))) {
+      // need to support mobile which adds : after a mention
+      mentionOnCalls(channel.name, "get in here! :point_up_2:");
+    } else {
+      // default
+      let preText =
+        (message_data.user ? " <@" + message_data.user + ">" : bot_tag()) +
+        ' said _"';
+      mentionOnCalls(
+        channel.name,
+        preText + message.substr(bot_tag().length + 1) + '_"'
+      );
+    }
+  }
+};
+
+const handle_dm = (message_data) => {
+  var message = message_data.text ? message_data.text.trim() : "";
+  slackdata.getUser(FIND_BY_ID, message_data.user, (err, user) => {
+    if (err) {
+      debug("err", err);
+    } else {
+      handle_version_cmd(bot, null, user, message);
+      // handle_who_cmd(bot, user, message);
+      if (message.match(WHO_REGEX)) {
+        // who command
+        debug("who message");
+        postMessage(user.name, "", "are the humans OnCall.", true);
+      } else if (message.match(HELP_REGEX)) {
+        // help command
+        if (DEBUG_RUN) {
+          // don't send message
         } else {
-          handle_version_cmd(bot, null, user, message);
-          // handle_who_cmd(bot, user, message);
-          if (message.match(WHO_REGEX)) {
-            // who command
-            debug("who message");
-            postMessage(user.name, "", "are the humans OnCall.", true);
-          } else if (message.match(HELP_REGEX)) {
-            // help command
-            if (DEBUG_RUN) {
-              // don't send message
-            } else {
-              bot.postMessageToUser(
-                user.name,
-                "I understand the following direct commands: *help*, *who* & *version*.",
-                { icon_emoji: iconEmoji }
-              );
-            }
-          }
+          bot.postMessageToUser(
+            user.name,
+            "I understand the following direct commands: *help*, *who* & *version*.",
+            { icon_emoji: iconEmoji }
+          );
         }
-      });
+      }
     }
   });
 };
