@@ -1,4 +1,3 @@
-import SlackBot from "slackbots";
 import _ from "underscore";
 import async from "async";
 import config from "config";
@@ -12,25 +11,19 @@ const FIND_BY_ID = 0;
 const FIND_BY_EMAIL = 1;
 const FIND_BY_NAME = 2;
 
-
-export const bot = new SlackBot({
-  token: config.get("slack.slack_token"), // Add a bot https://my.slack.com/services/new/bot and put the token
-  name: config.get("slack.bot_name"),
-});
-
 export default class SlackData {
-  constructor() {
+  constructor(slackbot) {
     debug("oncall service constructor");
+    this.bot = slackbot;
     this.cache = new NodeCache();
     this.cacheInterval = config.get("slack.cache_interval_seconds");
   }
 
-  async warmCaches(){
+  warmCaches() {
     debug("warming caches");
     this.cacheUsers(() => {});
     this.cacheChannels(() => {});
   }
-
 
   /**
    * Just get the users.
@@ -46,7 +39,7 @@ export default class SlackData {
       self.cache.get("users", (err, userObj) => {
         if (userObj == undefined) {
           const cb = (err, results) => {
-            if (err){
+            if (err) {
               debug("err", err);
             }
             self.getUser(findBy, value, callback);
@@ -66,12 +59,12 @@ export default class SlackData {
       });
     } else if (findBy == FIND_BY_ID && value.indexOf("U") == 0) {
       self.cache.get("ID:" + value, (err, userObj) => {
-        if (err){
+        if (err) {
           debug("err", err);
         }
         if (userObj == undefined) {
           const cb = (err, results) => {
-            if (err){
+            if (err) {
               debug("err", err);
             }
             self.getUser(findBy, value, callback);
@@ -84,12 +77,12 @@ export default class SlackData {
       });
     } else if (findBy == FIND_BY_NAME && !(value.indexOf("U") == 0)) {
       self.cache.get(value, (err, userObj) => {
-        if (err){
+        if (err) {
           debug("err", err);
         }
         if (userObj == undefined) {
           cb = (err, results) => {
-            if (err){
+            if (err) {
               debug("err", err);
             }
             self.getUser(findBy, value, callback);
@@ -128,6 +121,8 @@ export default class SlackData {
         self.cacheChannels(cb);
       } else {
         debug("finding channel");
+        debug(channelObj.channels.map(c=>c.id).filter(c=>c.startsWith("D06")));
+        debug(channelId);
         var channel = _.find(channelObj.channels, (channel) => {
           return channel.id == channelId;
         });
@@ -144,7 +139,7 @@ export default class SlackData {
   cacheUsers = (callback) => {
     const self = this;
     debug("caching users");
-    bot
+    self.bot
       .getUsers()
       .then((data) => {
         debug("got", data.members.length, "users");
@@ -188,7 +183,7 @@ export default class SlackData {
   cacheChannels = (callback) => {
     const self = this;
     debug("Caching channels");
-    bot.getChannels().then((data) => {
+    this.bot.getChannels().then((data) => {
       async.each(
         data,
         (_channel, cb) => {

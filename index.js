@@ -8,12 +8,13 @@ export { DEBUG_RUN };
 
 import PagerDuty from "./pagerduty.js";
 import config from "config";
+import { bot, bot_tag } from "./slack/bot.js";
 import async from "async";
 import { handle_version_cmd } from "./version.js";
 import dbg from "debug";
 import _ from "underscore";
 import NodeCache from "node-cache";
-import SlackData, { bot } from "./slack/data.js";
+import SlackData from "./slack/data.js";
 
 const debug = dbg("oncall_bot");
 
@@ -38,7 +39,7 @@ const FIND_BY_NAME = 2;
 const HELP_REGEX = new RegExp("^[hH]elp$");
 const WHO_REGEX = new RegExp("^[wW]ho$");
 
-const slackdata = new SlackData();
+const slackdata = new SlackData(bot);
 
 const getOncallSlackers = (callback) => {
   var oncallSlackers = [];
@@ -187,29 +188,11 @@ const handle_message = (message_data) => {
 
   debug("message", message_data.type, message_data);
 
-  var botTag = "<@" + bot.self.id + ">";
   var message = message_data.text ? message_data.text.trim() : "";
-  var botTagIndex = message.indexOf(botTag);
-
-  // the bot may have been mentioned by username (not id). check if that's the case
-  var username = "";
-  var enableBotBotComm = false;
-  if (botTagIndex <= 0 && message.indexOf("<@") == 0) {
-    var userNameData = message.match(/^<@(.*?)>/g);
-    username = userNameData && userNameData[0].replace(/[<@>]/g, "");
-    slackdata.getUser(FIND_BY_NAME, username, (err, user) => {
-      if (err) {
-        debug("error getting user:", err);
-      }
-      if (user && user.is_bot) {
-        botTag = "<@" + user.id + ">";
-        enableBotBotComm = true;
-      }
-    });
-  }
+  var botTagIndex = message.indexOf(bot_tag());
 
   // handle non-DM channel interaction
-  if (botTagIndex >= 0 || enableBotBotComm) {
+  if (botTagIndex >= 0) {
     handle_channel_message(message_data);
   }
   // handle direct bot interaction
@@ -225,27 +208,24 @@ const handle_channel_message = (message_data) => {
     debug("got channel", channel);
     if (channel) {
       debug("channel", channel);
-      if (message.match(new RegExp("^" + botTag + ":? who$"))) {
+      if (handle_version_cmd(bot, message_data.channel, null, message)) {
+        debug("version cmd");
+      } else if (message.match(new RegExp("^" + bot_tag() + ":? who$"))) {
         debug("who command");
         // who command
         postMessage(message_data.channel, "", "are the humans OnCall.", false);
-      } else if (message.match(new RegExp("^" + botTag + ":?$"))) {
+      } else if (message.match(new RegExp("^" + bot_tag() + ":?$"))) {
         // need to support mobile which adds : after a mention
         mentionOnCalls(channel.name, "get in here! :point_up_2:");
       } else {
         // default
         let preText =
-          (message_data.user ? " <@" + message_data.user + ">" : botTag) +
+          (message_data.user ? " <@" + message_data.user + ">" : bot_tag()) +
           ' said _"';
-        if (botTagIndex == 0) {
-          mentionOnCalls(
-            channel.name,
-            preText + message.substr(botTag.length + 1) + '_"'
-          );
-        } else if (message_data.user || enableBotBotComm) {
-          message = message.replace(/^<@(.*?)> +/, ""); // clean up spacing
-          mentionOnCalls(channel.name, preText + message + '_"');
-        }
+        mentionOnCalls(
+          channel.name,
+          preText + message.substr(bot_tag().length + 1) + '_"'
+        );
       }
     }
   });
@@ -261,7 +241,7 @@ const handle_dm = (message_data) => {
         if (err) {
           debug("err", err);
         } else {
-          handle_version_cmd(bot, user, message);
+          handle_version_cmd(bot, null, user, message);
           // handle_who_cmd(bot, user, message);
           if (message.match(WHO_REGEX)) {
             // who command
