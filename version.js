@@ -7,7 +7,7 @@ const debug = dbg("version");
 const iconEmoji = config.get("slack.emoji");
 import { DEBUG_RUN } from "./index.js";
 
-export const handle_version_cmd = (bot, channel, user, message) => {
+export const handleVersionCmd = (bot, channel, user, message) => {
   const VERSION_REGEX = new RegExp(`^(${bot_tag()}:? )?version$`);
   if (message.match(VERSION_REGEX)) {
     debug("version matched");

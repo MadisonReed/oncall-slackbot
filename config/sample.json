@@ -12,6 +12,9 @@
   "pagerduty" : {
     "schedule_ids" : [""],
     "pagerduty_token": "",
-    "cache_interval_seconds": 300
+    "cache_interval_seconds": 300,
+    "oncall_map": {
+      "pesui": "test"
+    }
   }
 }

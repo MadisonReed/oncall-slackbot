@@ -10,7 +10,7 @@ import PagerDuty from "./pagerduty.js";
 import config from "config";
 import { bot, bot_tag } from "./slack/bot.js";
 import async from "async";
-import { handle_version_cmd } from "./version.js";
+import { handleVersionCmd } from "./version.js";
 import dbg from "debug";
 import _ from "underscore";
 import NodeCache from "node-cache";
@@ -48,6 +48,9 @@ const getOncallSlackers = (callback) => {
   debug("pre pagerduty.getOnCalls");
   pagerDuty.getOnCalls(null, (err, pdUsers) => {
     debug("getOncalls callback");
+    if (err){
+      debug("err", err);
+    }
     async.each(
       pdUsers,
       (pdUser, cb) => {
@@ -171,10 +174,10 @@ bot.on("start", () => {
 });
 
 bot.on("message", (data) => {
-  handle_message(data);
+  handleMessage(data);
 });
 
-const handle_message = (message_data) => {
+const handleMessage = (message_data) => {
   // subscription for all incoming events https://api.slack.com/rtm
   //
   if (message_data.type != "message") {
@@ -198,34 +201,31 @@ const handle_message = (message_data) => {
     if (botTagIndex >= 0) {
       // first handle mentions of the bot itself
       // (bot commands)
-      handle_bot_commands(channel, message_data);
+      handleBotCommands(channel, message_data);
     } else if (channel) {
       // handle non-mentions in channels with the bot
       // including mentions of other oncalls
-      handle_channel_message(channel, message_data);
+      handleChannelMessage(channel, message_data);
     } else {
       // handle DMs with the bot
-      handle_dm(message_data);
+      handleDm(message_data);
     }
   });
 };
 
-const handle_channel_message = (channel, message_data) =>{
+const handleChannelMessage = (channel, message_data) =>{
   var message = message_data.text ? message_data.text.trim() : "";
   debug(message);
   handleOncallMention(['pesui'], message);
 }
 
-const handle_bot_commands = (channel, message_data) => {
+const handleBotCommands = (channel, message_data) => {
   debug("public channel interaction");
   var message = message_data.text ? message_data.text.trim() : "";
   debug("got channel", channel);
   if (channel) {
     debug("channel", channel);
-    getOncallSlackers((slackers) => {
-      handleOncallMention(slackers, message);
-    });
-    if (handle_version_cmd(bot, message_data.channel, null, message)) {
+    if (handleVersionCmd(bot, message_data.channel, null, message)) {
       debug("version cmd");
     } else if (message.match(new RegExp("^" + bot_tag() + ":? who$"))) {
       debug("who command");
@@ -247,13 +247,13 @@ const handle_bot_commands = (channel, message_data) => {
   }
 };
 
-const handle_dm = (message_data) => {
+const handleDm = (message_data) => {
   var message = message_data.text ? message_data.text.trim() : "";
   slackdata.getUser(FIND_BY_ID, message_data.user, (err, user) => {
     if (err) {
       debug("err", err);
     } else {
-      handle_version_cmd(bot, null, user, message);
+      handleVersionCmd(bot, null, user, message);
       // handle_who_cmd(bot, user, message);
       if (message.match(WHO_REGEX)) {
         // who command
