@@ -23,7 +23,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/MadisonReed/oncall-slackbot.git"
+    "url": "git://github.com/after-ephemera/oncall-slackbot.git"
   },
   "devDependencies": {
     "@types/async": "^3.2.22",

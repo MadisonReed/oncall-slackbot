@@ -134,13 +134,8 @@ export default class SlackData {
         self.cacheChannels(cb);
       } else {
         debug("finding channel");
-        debug(
-          channelObj.channels
-            .map((c) => c.id)
-            .filter((c) => c.startsWith("D06"))
-        );
-        debug(channelId);
         var channel = _.find(channelObj.channels, (channel) => {
+          debug("comparing", channel.id, "to", channelId);
           return channel.id == channelId;
         });
         callback(channel);

@@ -217,7 +217,6 @@ const handleChannelMessage = async (channel: SlackChannel, message_data) => {
 const handleBotCommands = (channel, message_data) => {
   debug("public channel interaction");
   var message = message_data.text ? message_data.text.trim() : "";
-  debug("got channel", channel);
   if (channel) {
     debug("channel", channel);
     if (handleVersionCmd(bot, message_data.channel, null, message)) {
