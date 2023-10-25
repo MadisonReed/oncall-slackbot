@@ -19,6 +19,7 @@ const debug = dbg("pagerduty");
 export interface PdUser {
   name: string;
   email: string;
+  id: string;
 }
 
 interface PdSchedule {

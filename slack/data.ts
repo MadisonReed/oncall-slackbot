@@ -6,6 +6,11 @@ import NodeCache from "node-cache";
 
 const debug = dbg("slackdata");
 
+export interface SlackUser {
+  id: string;
+  name: string;
+}
+
 // getUser constants
 const FIND_BY_ID = 0;
 const FIND_BY_EMAIL = 1;
@@ -32,68 +37,76 @@ export default class SlackData {
    * @param value value to search by
    * @param callback
    */
-  getUser = (findBy, value = "", callback) => {
-    const self = this;
-    debug("getting user by", findBy, value);
-    if (findBy == FIND_BY_EMAIL && value.indexOf("@") > 0) {
-      self.cache.get("users", (err, userObj) => {
-        if (userObj == undefined) {
-          const cb = (err, results) => {
-            if (err) {
-              debug("err", err);
-            }
-            self.getUser(findBy, value, callback);
-          };
-
-          self.cacheUsers(cb);
-        } else {
-          var member = undefined;
-
-          if (findBy == FIND_BY_EMAIL) {
-            member = _.find(userObj.members, (member) => {
-              return member.profile.email == value;
-            });
+  getUser = (findBy, value = ""):SlackUser => {
+    return new Promise((resolve, reject) => {
+      const self = this;
+      debug("getting user by", findBy, value);
+      if (findBy == FIND_BY_EMAIL && value.trim().indexOf("@") > 0) {
+        debug("getting by email");
+        self.cache.get("users", (err, userObj) => {
+          debug("got users from cache");
+          if (err) {
+            debug("user cache error:", err);
           }
-          callback(!member ? value + " not mapped to user" : null, member);
-        }
-      });
-    } else if (findBy == FIND_BY_ID && value.indexOf("U") == 0) {
-      self.cache.get("ID:" + value, (err, userObj) => {
-        if (err) {
-          debug("err", err);
-        }
-        if (userObj == undefined) {
-          const cb = (err, results) => {
-            if (err) {
-              debug("err", err);
-            }
-            self.getUser(findBy, value, callback);
-          };
+          if (userObj == undefined) {
+            debug("no cache yet, warming");
+            const cb = (err: any, _results: any) => {
+              if (err) {
+                debug("err", err);
+              }
+              self.getUser(findBy, value.trim());
+            };
 
-          self.cacheUsers(cb);
-        } else {
-          callback(!userObj ? value + " not mapped to user" : null, userObj);
-        }
-      });
-    } else if (findBy == FIND_BY_NAME && !(value.indexOf("U") == 0)) {
-      self.cache.get(value, (err, userObj) => {
-        if (err) {
-          debug("err", err);
-        }
-        if (userObj == undefined) {
-          cb = (err, results) => {
-            if (err) {
-              debug("err", err);
-            }
-            self.getUser(findBy, value, callback);
-          };
+            self.cacheUsers(cb);
+          } else {
+            let member = undefined;
 
-          self.cacheUsers(cb);
-        } else {
-          callback(!userObj ? value + " not mapped to user" : null, userObj);
-        }
-      });
-    }
+            if (findBy == FIND_BY_EMAIL) {
+              member = _.find(userObj.members, (member) => {
+                return member.profile.email == value.trim();
+              });
+            }
+            resolve(member);
+          }
+        });
+      } else if (findBy == FIND_BY_ID && value.trim().indexOf("U") == 0) {
+        self.cache.get("ID:" + value.trim(), (err, userObj) => {
+          if (err) {
+            debug("err", err);
+          }
+          if (userObj == undefined) {
+            const cb = (err, results) => {
+              if (err) {
+                debug("err", err);
+              }
+              self.getUser(findBy, value.trim());
+            };
+
+            self.cacheUsers(cb);
+          } else {
+            resolve(userObj);
+          }
+        });
+      } else if (findBy == FIND_BY_NAME && !(value.trim().indexOf("U") == 0)) {
+        self.cache.get(value.trim(), (err, userObj) => {
+          if (err) {
+            debug("err", err);
+          }
+          if (userObj == undefined) {
+            cb = (err, results) => {
+              if (err) {
+                debug("err", err);
+              }
+              self.getUser(findBy, value.trim());
+            };
+
+            self.cacheUsers(cb);
+          } else {
+            resolve(userObj);
+          }
+        });
+      }
+    });
   };
 
   /**
@@ -121,7 +134,11 @@ export default class SlackData {
         self.cacheChannels(cb);
       } else {
         debug("finding channel");
-        debug(channelObj.channels.map(c=>c.id).filter(c=>c.startsWith("D06")));
+        debug(
+          channelObj.channels
+            .map((c) => c.id)
+            .filter((c) => c.startsWith("D06"))
+        );
         debug(channelId);
         var channel = _.find(channelObj.channels, (channel) => {
           return channel.id == channelId;

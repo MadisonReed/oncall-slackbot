@@ -13,7 +13,7 @@ import async from "async";
 import { handleVersionCmd } from "./version.ts";
 import dbg from "debug";
 import _ from "underscore";
-import SlackData from "./slack/data.ts";
+import SlackData, { SlackUser } from "./slack/data.ts";
 import { handleOncallMention } from "./slack/message.ts";
 
 const debug = dbg("oncall_bot");
@@ -64,57 +64,38 @@ class OncallSlackUser {
   }
 }
 
-const getOncallSlackers = async (
-  callback: ((oncallUsers: OncallSlackUser[]) => void) | standardCallback
-) => {
+const getOncallSlackers = async () => {
   debug("getting oncall slack users");
   var oncallSlackers: OncallSlackUser[] = [];
   var oncallSlackerNames: string[] = [];
   debug("pre pagerduty.getOnCalls");
   const pdUsers: PdOncallResult[] = await pagerDuty.getOnCalls(null);
   debug("getOncalls callback");
-  async.each(
-    pdUsers,
-    (pdUser: PdOncallResult, cb) => {
-      if (pdUser.user.name == undefined) {
-        debug("...", pdUser);
-        cb();
+  for (const pdUser of pdUsers) {
+    if (pdUser.user.name == undefined) {
+      debug("...", pdUser);
+    } else {
+      const slackUser: SlackUser = await slackdata.getUser(
+        FIND_BY_EMAIL,
+        pdUser.user.email
+      );
+      if (!slackUser) {
+        debug("user doesn't have a slack id");
       } else {
-        slackdata.getUser(
-          FIND_BY_EMAIL,
-          pdUser.user.email,
-          (err: any, slacker) => {
-            if (err) {
-              debug("err", err);
-            } else if (!slacker) {
-              debug("user doesn't have a slack id");
-            } else {
-              oncallSlackers.push(
-                new OncallSlackUser(
-                  pdUser.user.name,
-                  pdUser.user.email,
-                  pdUser.id,
-                  pdUser.schedule.id,
-                  slacker.id
-                )
-              );
-              // oncallSlackers.push(slacker.id);
-              oncallSlackerNames.push(slacker.name);
-            }
-            cb();
-          }
+        oncallSlackers.push(
+          new OncallSlackUser(
+            pdUser.user.name,
+            pdUser.user.email,
+            pdUser.user.id,
+            pdUser.schedule.id,
+            slackUser.id
+          )
         );
-      }
-    },
-    (err) => {
-      if (err) {
-        debug("err", err);
-      } else {
-        debug("got all oncalls:", oncallSlackerNames);
-        callback(oncallSlackers);
+        oncallSlackerNames.push(slackUser.name);
       }
     }
-  );
+  }
+  return oncallSlackers;
 };
 
 /**
@@ -122,18 +103,18 @@ const getOncallSlackers = async (
  *
  * @param message
  */
-var messageOnCalls = (message: string) => {
-  getOncallSlackers((oncallUsers:OncallSlackUser[]) => {
-    _.each(oncallUsers, (slacker: OncallSlackUser) => {
-      debug("POST MESSAGE TO: " + slacker, message);
-      if (DEBUG_RUN) {
-        // don't send message
-      } else {
-        bot.postMessageToUser(testUser || slacker.slackId, message, {
-          icon_emoji: iconEmoji,
-        });
-      }
-    });
+var messageOnCalls = async (message: string) => {
+  const oncallUsers = await getOncallSlackers();
+  _.each(oncallUsers, (slacker: OncallSlackUser) => {
+    debug("POST MESSAGE TO: " + slacker, message);
+    if (DEBUG_RUN) {
+      // don't send message
+      debug("would send message to oncalls");
+    } else {
+      bot.postMessageToUser(testUser || slacker.slackId, message, {
+        icon_emoji: iconEmoji,
+      });
+    }
   });
 };
 
@@ -144,8 +125,10 @@ var messageOnCalls = (message: string) => {
  * @param message
  */
 var mentionOnCalls = (channel, message: string) => {
+  debug("mentionOnCalls");
   var usersToMention = "";
-  getOncallSlackers((oncallUsers:OncallSlackUser[]) => {
+  getOncallSlackers().then((oncallUsers) => {
+    debug("got oncalls", oncallUsers);
     _.each(oncallUsers, (slacker: OncallSlackUser) => {
       usersToMention += "<@" + (testUser || slacker.slackId) + "> ";
     });
@@ -174,10 +157,10 @@ var mentionOnCalls = (channel, message: string) => {
 const postMessage = (obj, preMessage, postMessage, direct) => {
   var usersToMention = "";
   debug("getting oncalls");
-  getOncallSlackers((oncallUsers: OncallSlackUser[]) => {
+  getOncallSlackers().then((oncallUsers) => {
     debug(
       "got oncalls",
-      oncallUsers.map((s: OncallSlackUser) => s.name)
+      oncallUsers.map((s: OncallSlackUser) => (s.name, s.slackId))
     );
     _.each(oncallUsers, (slacker: OncallSlackUser) => {
       usersToMention += "<@" + (testUser || slacker.slackId) + "> ";
@@ -199,11 +182,7 @@ const postMessage = (obj, preMessage, postMessage, direct) => {
  */
 bot.on("start", () => {
   slackdata.warmCaches();
-  async.series([
-    (callback) => {
-      getOncallSlackers(callback);
-    },
-  ]);
+  getOncallSlackers();
 });
 
 bot.on("message", (data) => {
@@ -224,12 +203,13 @@ const handleMessage = (message_data) => {
     return;
   }
 
-  debug("message", message_data.type, message_data);
+  debug("message", message_data);
 
   var message = message_data.text ? message_data.text.trim() : "";
   var botTagIndex = message.indexOf(bot_tag());
 
   slackdata.getChannel(message_data.channel, (channel) => {
+    debug("got channel", channel);
     // handle non-DM channel interaction
     if (botTagIndex >= 0) {
       // first handle mentions of the bot itself
@@ -281,28 +261,25 @@ const handleBotCommands = (channel, message_data) => {
 };
 
 const handleDm = (message_data) => {
+  debug("handleDm");
   var message = message_data.text ? message_data.text.trim() : "";
-  slackdata.getUser(FIND_BY_ID, message_data.user, (err, user) => {
-    if (err) {
-      debug("err", err);
-    } else {
-      handleVersionCmd(bot, null, user, message);
+  slackdata.getUser(FIND_BY_ID, message_data.user).then((user) => {
+    if (handleVersionCmd(bot, null, user, message)) {
+      debug("version cmd");
+    } else if (message.match(WHO_REGEX)) {
       // handle_who_cmd(bot, user, message);
-      if (message.match(WHO_REGEX)) {
-        // who command
-        debug("who message");
-        postMessage(user.name, "", "are the humans OnCall.", true);
-      } else if (message.match(HELP_REGEX)) {
-        // help command
-        if (DEBUG_RUN) {
-          // don't send message
-        } else {
-          bot.postMessageToUser(
-            user.name,
-            "I understand the following direct commands: *help*, *who* & *version*.",
-            { icon_emoji: iconEmoji }
-          );
-        }
+      debug("who message");
+      postMessage(user.name, "", "are the humans OnCall.", true);
+    } else if (message.match(HELP_REGEX)) {
+      // help command
+      if (DEBUG_RUN) {
+        // don't send message
+      } else {
+        bot.postMessageToUser(
+          user.name,
+          "I understand the following direct commands: *help*, *who* & *version*.",
+          { icon_emoji: iconEmoji }
+        );
       }
     }
   });
