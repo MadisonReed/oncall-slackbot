@@ -7,16 +7,18 @@ const DEBUG_RUN = process.env.DEBUG_RUN || false;
 export { DEBUG_RUN };
 
 import PagerDuty, { PdOncallResult } from "./pagerduty.ts";
-import config from "config";
+import jsonConfig from "config";
+import { BotConfig, OncallSlackUser } from "./types.ts";
 import { bot, bot_tag } from "./slack/bot.ts";
-import async from "async";
 import { handleVersionCmd } from "./version.ts";
+import { SlackChannel } from "./slack/types.ts";
 import dbg from "debug";
 import _ from "underscore";
 import SlackData, { SlackUser } from "./slack/data.ts";
 import { handleOncallMention } from "./slack/message.ts";
 
 const debug = dbg("oncall_bot");
+const config: BotConfig = jsonConfig;
 
 type standardCallback = (
   err?: Error | null | undefined,
@@ -27,8 +29,8 @@ type standardCallback = (
 const pagerDuty = new PagerDuty(config.get("pagerduty"));
 
 // create a bot
-console.log("token:", config.get("slack.slack_token"));
-const iconEmoji = config.get("slack.emoji");
+console.log("token:", config.slack.slack_token);
+const iconEmoji = config.slack.emoji;
 const testUser = config.get("slack.test_user");
 
 // getUser constants
@@ -41,28 +43,6 @@ const HELP_REGEX = new RegExp("^[hH]elp$");
 const WHO_REGEX = new RegExp("^[wW]ho$");
 
 const slackdata = new SlackData(bot);
-
-class OncallSlackUser {
-  name: string;
-  email: string;
-  pdId: string;
-  pdScheduleId: string;
-  slackId: string;
-
-  constructor(
-    name: string,
-    email: string,
-    pdId: string,
-    pdScheduleId: string,
-    slackId: string
-  ) {
-    this.name = name;
-    this.email = email;
-    this.pdId = pdId;
-    this.pdScheduleId = pdScheduleId;
-    this.slackId = slackId;
-  }
-}
 
 const getOncallSlackers = async () => {
   debug("getting oncall slack users");
@@ -226,10 +206,12 @@ const handleMessage = (message_data) => {
   });
 };
 
-const handleChannelMessage = (channel, message_data) => {
-  var message = message_data.text ? message_data.text.trim() : "";
-  debug(message);
-  handleOncallMention(pagerDuty, ["pesui"], message);
+const handleChannelMessage = async (channel: SlackChannel, message_data) => {
+  let message: string = message_data.text ? message_data.text.trim() : "";
+  debug(channel);
+
+  const oncallUsers = await getOncallSlackers();
+  handleOncallMention(oncallUsers, channel, message);
 };
 
 const handleBotCommands = (channel, message_data) => {

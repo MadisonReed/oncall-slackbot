@@ -1,11 +1,13 @@
 import dbg from "debug";
+import {SlackChannel }from "./types.ts";
+import { bot } from "./bot.ts";
 import config from "config";
-import async from 'async';
+import { DEBUG_RUN } from "../index.ts";
 
 const debug = dbg("slackMessage");
 const oncallMap = config.get("pagerduty.oncall_map");
 
-const oncallFromMessage = (message) => {
+const scheduleIdFromMessage = (message) => {
   const allowedOncalls = Object.keys(oncallMap);
   // extract mentioned shortname
   let oncallMentioned = allowedOncalls.find((oncall) =>
@@ -17,50 +19,25 @@ const oncallFromMessage = (message) => {
   return fullname;
 };
 
-export const handleOncallMention = (pagerDuty, oncalls, message) => {
-  debug("oncalls", oncalls, "message", message);
-  const oncallName = oncallFromMessage(message);
+export const handleOncallMention = (
+  oncalls: OncallSlackUser[],
+  channel: SlackChannel,
+  messageReceived: string
+) => {
+  const scheduleId = scheduleIdFromMessage(messageReceived);
   // get the current oncall for this shift
-
-  
-
-  pagerDuty.getOnCalls(null, (err, pdUsers) => {
-    if (err) {
-      debug("err", err);
-    }
-    debug("getOncalls callback");
-    async.each(
-      pdUsers,
-      (pdUser, cb) => {
-        if (pdUser.user.name == undefined) {
-          debug("...", pdUser);
-          cb();
-        } else {
-          slackdata.getUser(
-            FIND_BY_EMAIL,
-            pdUser.user.email,
-            (err, slacker) => {
-              if (err) {
-                debug("err", err);
-              } else if (!slacker) {
-                debug("user doesn't have a slack id");
-              } else {
-                oncallSlackers.push(slacker.id);
-                oncallSlackerNames.push(slacker.name);
-              }
-              cb();
-            }
-          );
-        }
-      },
-      (err) => {
-        if (err) {
-          debug("err", err);
-        } else {
-          debug("got all oncalls:", oncallSlackerNames);
-          callback(oncallSlackers);
-        }
-      }
-    );
+  const oncallUser = oncalls.find((oncall) => {
+    return oncall.pdScheduleId == scheduleId;
   });
+  if (!oncallUser){
+    // No oncall mentioned in the message
+    return;
+  }
+  // send message to channel mentioning user
+  const message = `<@${oncallUser.slackId}> ^^`;
+  if (DEBUG_RUN) {
+    debug("would send message to", channel.name, message);
+  } else {
+    bot.postMessageToChannel(channel.name, message);
+  }
 };

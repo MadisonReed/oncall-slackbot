@@ -37,7 +37,7 @@ export default class SlackData {
    * @param value value to search by
    * @param callback
    */
-  getUser = (findBy, value = ""):SlackUser => {
+  getUser = (findBy: number, value: string = ""): Promise<SlackUser> => {
     return new Promise((resolve, reject) => {
       const self = this;
       debug("getting user by", findBy, value);
