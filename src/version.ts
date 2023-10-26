@@ -1,4 +1,4 @@
-import pjson from "./package.json" assert { type: "json" };
+import pjson from "../package.json" assert { type: "json" };
 import dbg from "debug";
 import config from "config";
 import { bot_tag } from "./slack/bot.ts";
