@@ -29,7 +29,6 @@ type standardCallback = (
 const pagerDuty = new PagerDuty(config.get("pagerduty"));
 
 // create a bot
-console.log("token:", config.slack.slack_token);
 const iconEmoji = config.slack.emoji;
 const testUser = config.get("slack.test_user");
 
