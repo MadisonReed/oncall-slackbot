@@ -3,6 +3,7 @@ import async from "async";
 import config from "config";
 import dbg from "debug";
 import NodeCache from "node-cache";
+import Bot from "slack-bot-api";
 
 const debug = dbg("slackdata");
 
@@ -17,7 +18,11 @@ const FIND_BY_EMAIL = 1;
 const FIND_BY_NAME = 2;
 
 export default class SlackData {
-  constructor(slackbot) {
+  bot: Bot;
+  cache: NodeCache;
+  cacheInterval: number;
+
+  constructor(slackbot: Bot) {
     debug("oncall service constructor");
     this.bot = slackbot;
     this.cache = new NodeCache();
@@ -26,8 +31,8 @@ export default class SlackData {
 
   warmCaches() {
     debug("warming caches");
-    this.cacheUsers(() => {});
-    this.cacheChannels(() => {});
+    this.cacheUsers();
+    this.cacheChannels(() => { });
   }
 
   /**
@@ -37,76 +42,46 @@ export default class SlackData {
    * @param value value to search by
    * @param callback
    */
-  getUser = (findBy: number, value: string = ""): Promise<SlackUser> => {
-    return new Promise((resolve, reject) => {
-      const self = this;
-      debug("getting user by", findBy, value);
-      if (findBy == FIND_BY_EMAIL && value.trim().indexOf("@") > 0) {
-        debug("getting by email");
-        self.cache.get("users", (err, userObj) => {
-          debug("got users from cache");
-          if (err) {
-            debug("user cache error:", err);
-          }
-          if (userObj == undefined) {
-            debug("no cache yet, warming");
-            const cb = (err: any, _results: any) => {
-              if (err) {
-                debug("err", err);
-              }
-              self.getUser(findBy, value.trim());
-            };
+  getUser = async (findBy: number, value: string = ""): Promise<SlackUser> => {
+    const self = this;
+    debug("getting user by", findBy, value);
+    if (findBy == FIND_BY_EMAIL && value.trim().indexOf("@") > 0) {
+      debug("getting by email");
+      const users = self.cache.get("users");
+      debug("got users from cache");
+      if (users == undefined) {
+        debug("no cache yet, warming");
+        await self.cacheUsers();
+        return await self.getUser(findBy, value);
+      } else {
+        let member = undefined;
 
-            self.cacheUsers(cb);
-          } else {
-            let member = undefined;
-
-            if (findBy == FIND_BY_EMAIL) {
-              member = _.find(userObj.members, (member) => {
-                return member.profile.email == value.trim();
-              });
-            }
-            resolve(member);
-          }
-        });
-      } else if (findBy == FIND_BY_ID && value.trim().indexOf("U") == 0) {
-        self.cache.get("ID:" + value.trim(), (err, userObj) => {
-          if (err) {
-            debug("err", err);
-          }
-          if (userObj == undefined) {
-            const cb = (err, results) => {
-              if (err) {
-                debug("err", err);
-              }
-              self.getUser(findBy, value.trim());
-            };
-
-            self.cacheUsers(cb);
-          } else {
-            resolve(userObj);
-          }
-        });
-      } else if (findBy == FIND_BY_NAME && !(value.trim().indexOf("U") == 0)) {
-        self.cache.get(value.trim(), (err, userObj) => {
-          if (err) {
-            debug("err", err);
-          }
-          if (userObj == undefined) {
-            cb = (err, results) => {
-              if (err) {
-                debug("err", err);
-              }
-              self.getUser(findBy, value.trim());
-            };
-
-            self.cacheUsers(cb);
-          } else {
-            resolve(userObj);
-          }
-        });
+        if (findBy == FIND_BY_EMAIL) {
+          member = _.find(users.members, (member) => {
+            return member.profile.email == value.trim();
+          });
+        }
+        return member;
       }
-    });
+    } else if (findBy == FIND_BY_ID && value.trim().indexOf("U") == 0) {
+      const user = self.cache.get("ID:" + value.trim());
+      if (user == undefined) {
+        await self.cacheUsers();
+        return await self.getUser(findBy, value);
+      } else {
+        return user;
+      }
+    } else if (findBy == FIND_BY_NAME && !(value.trim().indexOf("U") == 0)) {
+      const user = self.cache.get(value.trim());
+      if (user == undefined) {
+        await self.cacheUsers();
+        return await self.getUser(findBy, value);
+      } else {
+        return user;
+      }
+    } else {
+      throw new Error(`findby ${findBy} and value ${value} not matching any known combination`);
+    }
   };
 
   /**
@@ -148,43 +123,21 @@ export default class SlackData {
    *
    * @param callback
    */
-  cacheUsers = (callback) => {
+  cacheUsers = async () => {
     const self = this;
     debug("caching users");
-    self.bot
-      .getUsers()
-      .then((data) => {
-        debug("got", data.members.length, "users");
-        async.each(
-          data.members,
-          (user, each_cb) => {
-            // debug("Caching user name/id: " + user.name);
-
-            async.parallel(
-              [
-                (cb) => {
-                  self.cache.set(user.name, user, self.cacheInterval, cb);
-                },
-                (cb) => {
-                  self.cache.set("ID:" + user.id, user, self.cacheInterval, cb);
-                },
-              ],
-              each_cb
-            );
-          },
-          (err) => {
-            if (err) {
-              debug("err", err);
-              callback(err);
-            } else {
-              callback(self.cache.set("users", data, self.cacheInterval));
-            }
-          }
-        );
-      })
-      .catch((err) => {
-        debug("err from cacheUsers", err);
-      });
+    const users = await self.bot.getUsers();
+    debug("got", users.members.length, "users");
+    for (const user of users.members) {
+      const individualResults = await Promise.all([
+        self.cache.set(user.name, user, self.cacheInterval),
+        self.cache.set("ID:" + user.id, user, self.cacheInterval),
+      ]);
+      if (!individualResults.every(Boolean)) {
+        debug("failed to set user cache");
+      }
+    }
+    return self.cache.set("users", users, self.cacheInterval);
   };
 
   /**
