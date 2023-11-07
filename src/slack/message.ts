@@ -1,4 +1,5 @@
 import dbg from "debug";
+import { OncallSlackUser } from "../types.ts";
 import {SlackChannel }from "./types.ts";
 import { bot } from "./bot.ts";
 import config from "config";
@@ -22,7 +23,8 @@ const scheduleIdFromMessage = (message) => {
 export const handleOncallMention = (
   oncalls: OncallSlackUser[],
   channel: SlackChannel,
-  messageReceived: string
+  messageReceived: string,
+  threadTs: string,
 ) => {
   const scheduleId = scheduleIdFromMessage(messageReceived);
   // get the current oncall for this shift
@@ -38,6 +40,7 @@ export const handleOncallMention = (
   if (DEBUG_RUN) {
     debug("would send message to", channel.name, message);
   } else {
-    bot.postMessageToChannel(channel.name, message);
+    debug("thread ts", threadTs);
+    bot.postMessageToChannel(channel.name, message, {thread_ts:threadTs});
   }
 };

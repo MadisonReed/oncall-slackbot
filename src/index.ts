@@ -14,7 +14,7 @@ import { handleVersionCmd } from "./version.ts";
 import { SlackChannel } from "./slack/types.ts";
 import dbg from "debug";
 import _ from "underscore";
-import SlackData, { SlackUser } from "./slack/data.ts";
+import SlackData, { SlackUser, FIND_BY_ID, FIND_BY_EMAIL } from "./slack/data.ts";
 import { handleOncallMention } from "./slack/message.ts";
 
 const debug = dbg("oncall_bot");
@@ -31,11 +31,6 @@ const pagerDuty = new PagerDuty(config.get("pagerduty"));
 // create a bot
 const iconEmoji = config.slack.emoji;
 const testUser = config.get("slack.test_user");
-
-// getUser constants
-const FIND_BY_ID = 0;
-const FIND_BY_EMAIL = 1;
-const FIND_BY_NAME = 2;
 
 // commands
 const HELP_REGEX = new RegExp("^[hH]elp$");
@@ -208,9 +203,10 @@ const handleMessage = (message_data) => {
 const handleChannelMessage = async (channel: SlackChannel, message_data) => {
   let message: string = message_data.text ? message_data.text.trim() : "";
   debug(channel);
+  debug("message", message_data);
 
   const oncallUsers = await getOncallSlackers();
-  handleOncallMention(oncallUsers, channel, message);
+  handleOncallMention(oncallUsers, channel, message, message_data.thread_ts || message_data.ts);
 };
 
 const handleBotCommands = (channel, message_data) => {

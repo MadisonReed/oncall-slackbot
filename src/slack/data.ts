@@ -13,9 +13,9 @@ export interface SlackUser {
 }
 
 // getUser constants
-const FIND_BY_ID = 0;
-const FIND_BY_EMAIL = 1;
-const FIND_BY_NAME = 2;
+export const FIND_BY_ID = 0;
+export const FIND_BY_EMAIL = 1;
+export const FIND_BY_NAME = 2;
 
 export default class SlackData {
   bot: Bot;
