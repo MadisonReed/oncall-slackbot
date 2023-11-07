@@ -212,7 +212,7 @@ const handleChannelMessage = async (
     oncallUsers,
     channel,
     message,
-    message_data.message.thread_ts || message_data.ts
+    message_data.thread_ts || message_data.ts
   );
 };
 

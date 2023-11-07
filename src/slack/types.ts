@@ -63,4 +63,5 @@ export interface MessageData {
   channel: string;
   team: string;
   ts: string;
+  thread_ts: string;
 }

@@ -15,9 +15,7 @@ const scheduleIdFromMessage = (message) => {
   // extract mentioned shortname
   let oncallMentioned = allowedOncalls.find((oncall) => {
     const oncallRe = new RegExp(`@${oncall}\\b`);
-    const res = oncallRe.exec(message);
-    debug(res);
-    return res
+    return oncallRe.exec(message);
   });
   // get the full name from that
   const fullname = oncallMap[oncallMentioned];
@@ -33,7 +31,7 @@ export const handleOncallMention = (
 ) => {
   const scheduleId = scheduleIdFromMessage(messageReceived);
   debug("sid", scheduleId);
-  if (!scheduleId){
+  if (!scheduleId) {
     debug("no schedule ID found");
     return; //none
   }
@@ -51,6 +49,11 @@ export const handleOncallMention = (
     debug("would send message to", channel.name, message);
   } else {
     debug("thread ts", threadTs);
-    bot.postMessageToChannel(channel.name, message, { thread_ts: threadTs }, (val)=>debug(val));
+    bot.postMessageToChannel(
+      channel.name,
+      message,
+      { thread_ts: threadTs },
+      (val) => debug(val)
+    );
   }
 };
