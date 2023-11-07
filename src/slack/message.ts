@@ -1,6 +1,6 @@
 import dbg from "debug";
 import { OncallSlackUser } from "../types.ts";
-import {SlackChannel }from "./types.ts";
+import { SlackChannel } from "./types.ts";
 import { bot } from "./bot.ts";
 import config from "config";
 import { DEBUG_RUN } from "../index.ts";
@@ -10,10 +10,14 @@ const oncallMap = config.get("pagerduty.oncall_map");
 
 const scheduleIdFromMessage = (message) => {
   const allowedOncalls = Object.keys(oncallMap);
+  debug("getting schedule ID from message");
   // extract mentioned shortname
-  let oncallMentioned = allowedOncalls.find((oncall) =>
-    message.includes(`@${oncall}`)
-  );
+  let oncallMentioned = allowedOncalls.find((oncall) => {
+    const oncallRe = new RegExp(`@${oncall}\\b`);
+    const res = oncallRe.exec(message);
+    debug(res);
+    return res
+  });
   // get the full name from that
   const fullname = oncallMap[oncallMentioned];
   debug("oncall mentioned was", fullname);
@@ -24,14 +28,19 @@ export const handleOncallMention = (
   oncalls: OncallSlackUser[],
   channel: SlackChannel,
   messageReceived: string,
-  threadTs: string,
+  threadTs: string
 ) => {
   const scheduleId = scheduleIdFromMessage(messageReceived);
+  debug("sid", scheduleId);
+  if (!scheduleId){
+    debug("no schedule ID found");
+    return; //none
+  }
   // get the current oncall for this shift
   const oncallUser = oncalls.find((oncall) => {
     return oncall.pdScheduleId == scheduleId;
   });
-  if (!oncallUser){
+  if (!oncallUser) {
     // No oncall mentioned in the message
     return;
   }
@@ -41,6 +50,6 @@ export const handleOncallMention = (
     debug("would send message to", channel.name, message);
   } else {
     debug("thread ts", threadTs);
-    bot.postMessageToChannel(channel.name, message, {thread_ts:threadTs});
+    bot.postMessageToChannel(channel.name, message, { thread_ts: threadTs }, (val)=>debug(val));
   }
 };

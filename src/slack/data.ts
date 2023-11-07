@@ -44,11 +44,8 @@ export default class SlackData {
    */
   getUser = async (findBy: number, value: string = ""): Promise<SlackUser> => {
     const self = this;
-    debug("getting user by", findBy, value);
     if (findBy == FIND_BY_EMAIL && value.trim().indexOf("@") > 0) {
-      debug("getting by email");
       const users = self.cache.get("users");
-      debug("got users from cache");
       if (users == undefined) {
         debug("no cache yet, warming");
         await self.cacheUsers();
@@ -110,7 +107,6 @@ export default class SlackData {
       } else {
         debug("finding channel");
         var channel = _.find(channelObj.channels, (channel) => {
-          debug("comparing", channel.id, "to", channelId);
           return channel.id == channelId;
         });
         callback(channel);
@@ -148,7 +144,10 @@ export default class SlackData {
   cacheChannels = (callback) => {
     const self = this;
     debug("Caching channels");
-    this.bot.getChannels().then((data) => {
+    this.bot.getChannels().then((data, err) => {
+      if (err){
+        debug("error getting channels", err);
+      }
       async.each(
         data,
         (_channel, cb) => {
@@ -158,6 +157,7 @@ export default class SlackData {
           if (err) {
             debug("err", err);
           } else {
+            debug("setting channel cache");
             self.cache.set("channels", data, self.cacheInterval, callback);
           }
         }
