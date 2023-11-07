@@ -1,4 +1,3 @@
-import _ from "underscore";
 import async from "async";
 import config from "config";
 import dbg from "debug";
@@ -32,7 +31,7 @@ export default class SlackData {
   warmCaches() {
     debug("warming caches");
     this.cacheUsers();
-    this.cacheChannels(() => { });
+    this.cacheChannels(() => {});
   }
 
   /**
@@ -54,7 +53,7 @@ export default class SlackData {
         let member = undefined;
 
         if (findBy == FIND_BY_EMAIL) {
-          member = _.find(users.members, (member) => {
+          member = users.members.find((member) => {
             return member.profile.email == value.trim();
           });
         }
@@ -77,7 +76,9 @@ export default class SlackData {
         return user;
       }
     } else {
-      throw new Error(`findby ${findBy} and value ${value} not matching any known combination`);
+      throw new Error(
+        `findby ${findBy} and value ${value} not matching any known combination`
+      );
     }
   };
 
@@ -106,7 +107,7 @@ export default class SlackData {
         self.cacheChannels(cb);
       } else {
         debug("finding channel");
-        var channel = _.find(channelObj.channels, (channel) => {
+        var channel = channelObj.channels.find((channel) => {
           return channel.id == channelId;
         });
         callback(channel);
@@ -145,7 +146,7 @@ export default class SlackData {
     const self = this;
     debug("Caching channels");
     this.bot.getChannels().then((data, err) => {
-      if (err){
+      if (err) {
         debug("error getting channels", err);
       }
       async.each(
