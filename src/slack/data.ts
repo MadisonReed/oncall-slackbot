@@ -91,28 +91,24 @@ export default class SlackData {
   getChannel = (channelId, callback) => {
     const self = this;
     debug("getting cached channels");
-    self.cache.get("channels", (err, channelObj) => {
-      if (err) {
-        debug("err:", err);
-      }
-      if (channelObj == undefined) {
-        debug("undefined channels object");
-        const cb = (err, results) => {
-          if (err) {
-            debug("err:", err);
-          }
-          getChannel(channelId, callback);
-        };
+    const channelObj = self.cache.get("channels");
+    if (channelObj == undefined) {
+      debug("undefined channels object");
+      const cb = (err, results) => {
+        if (err) {
+          debug("err:", err);
+        }
+        getChannel(channelId, callback);
+      };
 
-        self.cacheChannels(cb);
-      } else {
-        debug("finding channel");
-        var channel = channelObj.channels.find((channel) => {
-          return channel.id == channelId;
-        });
-        callback(channel);
-      }
-    });
+      self.cacheChannels(cb);
+    } else {
+      debug("finding channel");
+      var channel = channelObj.channels.find((channel) => {
+        return channel.id == channelId;
+      });
+      callback(channel);
+    }
   };
 
   /**
@@ -159,7 +155,8 @@ export default class SlackData {
             debug("err", err);
           } else {
             debug("setting channel cache");
-            self.cache.set("channels", data, self.cacheInterval, callback);
+            const channels = self.cache.set("channels", data, self.cacheInterval);
+            callback(channels);
           }
         }
       );

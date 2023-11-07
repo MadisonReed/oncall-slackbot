@@ -138,7 +138,8 @@ class PagerDuty {
         {
           getCacheData: function (cb) {
             debug("getCacheData");
-            self.cache.get(options.contentIndex, cb);
+            const oncalls = self.cache.get(options.contentIndex);
+            cb(null, oncalls);
           },
           checkCacheData: [
             "getCacheData",
@@ -148,7 +149,7 @@ class PagerDuty {
                 options.callback = cb;
                 self.getAllPaginatedData(options);
               } else {
-                resolve(results.getCacheData);
+                cb(null, results.getCacheData);
               }
             },
           ],
@@ -161,8 +162,8 @@ class PagerDuty {
                 options.contentIndex,
                 cacheableResult,
                 self.cacheInterval,
-                cb(null, cacheableResult)
               );
+              cb(null, cacheableResult)
             },
           ],
         },
