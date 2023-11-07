@@ -8,11 +8,12 @@ export { DEBUG_RUN };
 
 import jsonConfig from "config";
 import dbg from "debug";
+
 import PagerDuty, { PdOncallResult } from "./pagerduty.ts";
 import { BotConfig, OncallSlackUser } from "./types.ts";
 import { bot, bot_tag } from "./slack/bot.ts";
 import { handleVersionCmd } from "./version.ts";
-import { SlackChannel } from "./slack/types.ts";
+import { SlackChannel, MessageData } from "./slack/types.ts";
 import SlackData, {
   SlackUser,
   FIND_BY_ID,
@@ -21,12 +22,7 @@ import SlackData, {
 import { handleOncallMention } from "./slack/message.ts";
 
 const debug = dbg("oncall_bot");
-const config: BotConfig = jsonConfig;
-
-type standardCallback = (
-  err?: Error | null | undefined,
-  result?: unknown
-) => void;
+const config: BotConfig = jsonConfig as BotConfig;
 
 // get pagerduty integration
 const pagerDuty = new PagerDuty(config.get("pagerduty"));
@@ -101,7 +97,7 @@ var messageOnCalls = async (message: string) => {
  * @param channel
  * @param message
  */
-var mentionOnCalls = (channel, message: string) => {
+var mentionOnCalls = (channel: string, message: string) => {
   debug("mentionOnCalls");
   var usersToMention = "";
   getOncallSlackers().then((oncallUsers) => {
@@ -126,12 +122,12 @@ var mentionOnCalls = (channel, message: string) => {
 /**
  * Post message with reference to oncall peeps
  *
- * @param obj
+ * @param name the slack name of the recipient
  * @param preMessage
  * @param postMessage
  * @param direct
  */
-const postMessage = (obj, preMessage, postMessage, direct) => {
+const postMessage = (name: string, postMessage: string, direct: boolean) => {
   var usersToMention = "";
   debug("getting oncalls");
   getOncallSlackers().then((oncallUsers) => {
@@ -147,9 +143,9 @@ const postMessage = (obj, preMessage, postMessage, direct) => {
       // dry run
       debug("would post to user", message);
     } else if (direct) {
-      bot.postMessageToUser(obj, message, { icon_emoji: iconEmoji });
+      bot.postMessageToUser(name, message, { icon_emoji: iconEmoji });
     } else {
-      bot.postMessage(obj, message, { icon_emoji: iconEmoji });
+      bot.postMessage(name, message, { icon_emoji: iconEmoji });
     }
   });
 };
@@ -162,11 +158,11 @@ bot.on("start", () => {
   getOncallSlackers();
 });
 
-bot.on("message", (data) => {
+bot.on("message", (data: MessageData) => {
   handleMessage(data);
 });
 
-const handleMessage = (message_data) => {
+const handleMessage = (message_data: MessageData) => {
   // subscription for all incoming events https://api.slack.com/rtm
   //
   if (message_data.type != "message") {
@@ -185,7 +181,7 @@ const handleMessage = (message_data) => {
   var message = message_data.text ? message_data.text.trim() : "";
   var botTagIndex = message.indexOf(bot_tag());
 
-  slackdata.getChannel(message_data.channel, (channel) => {
+  slackdata.getChannel(message_data.channel, (channel: SlackChannel) => {
     debug("got channel", channel);
     // handle non-DM channel interaction
     if (botTagIndex >= 0) {
@@ -203,7 +199,10 @@ const handleMessage = (message_data) => {
   });
 };
 
-const handleChannelMessage = async (channel: SlackChannel, message_data) => {
+const handleChannelMessage = async (
+  channel: SlackChannel,
+  message_data: MessageData
+) => {
   let message: string = message_data.text ? message_data.text.trim() : "";
   debug(channel);
   debug("message", message_data);
@@ -213,11 +212,14 @@ const handleChannelMessage = async (channel: SlackChannel, message_data) => {
     oncallUsers,
     channel,
     message,
-    message_data.thread_ts || message_data.ts
+    message_data.message.thread_ts || message_data.ts
   );
 };
 
-const handleBotCommands = (channel, message_data) => {
+const handleBotCommands = (
+  channel: SlackChannel,
+  message_data: MessageData
+) => {
   debug("public channel interaction");
   var message = message_data.text ? message_data.text.trim() : "";
   if (channel) {
@@ -227,7 +229,7 @@ const handleBotCommands = (channel, message_data) => {
     } else if (message.match(new RegExp("^" + bot_tag() + ":? who$"))) {
       debug("who command");
       // who command
-      postMessage(message_data.channel, "", "are the humans OnCall.", false);
+      postMessage(message_data.channel, "are the humans OnCall.", false);
     } else if (message.match(new RegExp("^" + bot_tag() + ":?$"))) {
       // need to support mobile which adds : after a mention
       mentionOnCalls(channel.name, "get in here! :point_up_2:");
@@ -238,22 +240,22 @@ const handleBotCommands = (channel, message_data) => {
         ' said _"';
       mentionOnCalls(
         channel.name,
-        preText + message.substr(bot_tag().length + 1) + '_"'
+        preText + message.substring(bot_tag().length + 1) + '_"'
       );
     }
   }
 };
 
-const handleDm = (message_data) => {
+const handleDm = (message_data: MessageData) => {
   debug("handleDm");
   var message = message_data.text ? message_data.text.trim() : "";
-  slackdata.getUser(FIND_BY_ID, message_data.user).then((user) => {
+  slackdata.getUser(FIND_BY_ID, message_data.user as string).then((user) => {
     if (handleVersionCmd(bot, null, user, message)) {
       debug("version cmd");
     } else if (message.match(WHO_REGEX)) {
       // handle_who_cmd(bot, user, message);
       debug("who message");
-      postMessage(user.name, "", "are the humans OnCall.", true);
+      postMessage(user.name, "are the humans OnCall.", true);
     } else if (message.match(HELP_REGEX)) {
       // help command
       if (DEBUG_RUN) {

@@ -13,6 +13,9 @@
     "npm": "2.15.5"
   },
   "dependencies": {
+    "@types/config": "^3.3.3",
+    "@types/debug": "^4.1.11",
+    "@types/request": "^2.48.12",
     "async": "2.6.4",
     "config": "3.3.9",
     "debug": "^4.3.2",

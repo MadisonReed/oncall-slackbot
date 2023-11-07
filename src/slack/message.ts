@@ -1,8 +1,9 @@
 import dbg from "debug";
+import config from "config";
+
 import { OncallSlackUser } from "../types.ts";
 import { SlackChannel } from "./types.ts";
 import { bot } from "./bot.ts";
-import config from "config";
 import { DEBUG_RUN } from "../index.ts";
 
 const debug = dbg("slackMessage");

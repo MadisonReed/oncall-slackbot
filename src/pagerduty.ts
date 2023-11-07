@@ -6,10 +6,8 @@ var oncallsParams = {
   "include[]": "users",
 };
 
-//
 import request from "request";
 import async from "async";
-import _ from "underscore";
 import querystring from "querystring";
 import dbg from "debug";
 import NodeCache from "node-cache";
