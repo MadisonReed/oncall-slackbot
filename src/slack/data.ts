@@ -145,21 +145,9 @@ export default class SlackData {
       if (err) {
         debug("error getting channels", err);
       }
-      async.each(
-        data,
-        (_channel, cb) => {
-          cb();
-        },
-        (err) => {
-          if (err) {
-            debug("err", err);
-          } else {
-            debug("setting channel cache");
-            const channels = self.cache.set("channels", data, self.cacheInterval);
-            callback(channels);
-          }
-        }
-      );
+      debug("setting channel cache");
+      const channels = self.cache.set("channels", data, self.cacheInterval);
+      callback(err, channels);
     });
   };
 }
