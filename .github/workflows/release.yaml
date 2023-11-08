@@ -17,7 +17,8 @@ jobs:
           bun-version: latest
       - name: install deps
         run: bun i
-        # todo: get config file from secret
+      - name: install config
+        run: echo ${{ secrets.DEFAULT_CONFIG }} > config/default.json
       - name: run tests
         run: bun test
   create-gh-release:
