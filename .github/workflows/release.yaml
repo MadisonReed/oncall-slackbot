@@ -18,7 +18,7 @@ jobs:
       - name: install deps
         run: bun i
       - name: install config
-        uses: ttd2089/secret-file-action@v1.0.0
+        uses: ttd2089/secret-file-action@1.0.0
         id: gpg-key-secret
         with:
           secret: ${{ secrets.DEFAULT_CONFIG }}
