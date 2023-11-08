@@ -18,12 +18,18 @@ jobs:
       - name: install deps
         run: bun i
       - name: install config
-        run: echo ${{ secrets.DEFAULT_CONFIG }} > config/default.json
+        uses: ttd2089/secret-file-action@v1.1
+        id: gpg-key-secret
+        with:
+          secret: ${{ secrets.DEFAULT_CONFIG }}
+          b64-decode: false
+          file: config/default.json
       - name: run tests
         run: bun test
   create-gh-release:
     name: Create github release
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
