@@ -1,0 +1,23 @@
+---
+name: Bump version
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup node
+        uses: actions/setup-node@v3
+      - name: bump version
+        id: bump
+        run: |
+          npm version patch
+          version=$(npm version --json | jq '."oncall-slackbot"')
+          echo "version=$version" >> $GITHUB_OUTPUT
+      - name: push commit
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: version patch to ${{ steps.bump.outputs.version }}
