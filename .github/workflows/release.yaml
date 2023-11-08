@@ -25,7 +25,10 @@ jobs:
           b64-decode: false
           file: config/default.json
       - name: run tests
-        run: bun test
+        run: |
+          apt-get install tree -y
+          tree -L 3 .
+          bun test
   create-gh-release:
     name: Create github release
     runs-on: ubuntu-latest
