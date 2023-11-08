@@ -48,7 +48,7 @@ class PagerDuty {
     this.cacheInterval = options.cache_interval_seconds;
   }
 
-  getAllPaginatedData(options): void {
+  async getAllPaginatedData(options): void {
     debug("getAllPaginatedData");
     options.params = options.params || {};
     options.params.limit = 100; // 100 is the max limit allowed by pagerduty
@@ -59,20 +59,18 @@ class PagerDuty {
       self = this,
       requestOptions = {
         headers: self.headers,
-        json: true,
-        total: true,
       };
 
-    var pagedCallback = function (error, content) {
+    var pagedCallback = async (error, content) => {
       if (error) {
         debug("Issues with pagedCallback: " + error);
-        return options.callback(error);
+        return error;
       }
 
       if (!content || !content[options.contentIndex]) {
         error = "Page does not have valid data: " + JSON.stringify(content);
         debug(error);
-        return options.callback(new Error(error));
+        return error;
       }
 
       if (content[options.contentIndex].length > 0) {
@@ -96,13 +94,13 @@ class PagerDuty {
       });
 
       if (options.params.offset >= total) {
-        options.callback(error, items);
+        return items;
       } else {
-        requestAnotherPage();
+        await requestAnotherPage();
       }
     };
 
-    var requestAnotherPage = function () {
+    var requestAnotherPage = async () => {
       debug("requesting another page");
       // must use node's built in querystring since qs doesn't build arrays like PagerDuty expects.
       requestOptions.url =
@@ -111,71 +109,32 @@ class PagerDuty {
         "?" +
         querystring.stringify(options.params);
 
-      request(requestOptions, function (error, response, body) {
-        if (!error && response.statusCode == 200) {
-          pagedCallback(null, body);
-        } else {
-          pagedCallback(error);
-        }
-      });
+      const response = await fetch(requestOptions.url, requestOptions);
+      if (!response.ok) {
+        return await pagedCallback(response);
+      } else {
+        return await pagedCallback(null, await response.json());
+      }
     };
 
-    requestAnotherPage();
+    return await requestAnotherPage();
   }
 
-  getOnCalls(params): Promise<PdOncallResult[]> {
-    return new Promise<PdOncallResult[]>((resolve, reject) => {
-      debug("pagerduty.getOnCalls");
-      var options = {
-        contentIndex: "oncalls",
-        secondaryIndex: "user",
-        uri: "/oncalls",
-        callback: resolve,
-        params: params || oncallsParams,
-      };
-      var self = this;
-      async.auto(
-        {
-          getCacheData: function (cb) {
-            debug("getCacheData");
-            const oncalls = self.cache.get(options.contentIndex);
-            cb(null, oncalls);
-          },
-          checkCacheData: [
-            "getCacheData",
-            function (results, cb) {
-              debug("checkCacheData");
-              if (results.getCacheData == undefined) {
-                options.callback = cb;
-                self.getAllPaginatedData(options);
-              } else {
-                cb(null, results.getCacheData);
-              }
-            },
-          ],
-          setCacheData: [
-            "checkCacheData",
-            function (results, cb) {
-              debug("setCacheData");
-              var cacheableResult = results.checkCacheData;
-              self.cache.set(
-                options.contentIndex,
-                cacheableResult,
-                self.cacheInterval,
-              );
-              cb(null, cacheableResult)
-            },
-          ],
-        },
-        function (err, result) {
-          if (err) {
-            debug("err:", err);
-          }
-          Bun.write("/tmp/bun_out", JSON.stringify(result.setCacheData));
-          resolve(result.setCacheData);
-        }
-      );
-    });
+  async getOnCalls(params): Promise<PdOncallResult[]> {
+    debug("pagerduty.getOnCalls");
+    var options = {
+      contentIndex: "oncalls",
+      secondaryIndex: "user",
+      uri: "/oncalls",
+      params: params || oncallsParams,
+    };
+    let oncalls = this.cache.get(options.contentIndex);
+    if (oncalls == undefined) {
+      oncalls = this.getAllPaginatedData(options);
+    }
+    this.cache.set(options.contentIndex, oncalls, this.cacheInterval);
+    Bun.write("/tmp/bun_out", JSON.stringify(oncalls));
+    return oncalls;
   }
 }
 
