@@ -14,14 +14,9 @@
     "npm": "2.15.5"
   },
   "dependencies": {
-    "@types/config": "^3.3.3",
-    "@types/debug": "^4.1.11",
-    "@types/jest": "^29.5.8",
-    "@types/request": "^2.48.12",
     "config": "3.3.9",
     "debug": "^4.3.4",
     "node-cache": "5.1.2",
-    "request": "^2.88.2",
     "slackbots": "git://github.com/after-ephemera/slack-bot-api.git#master"
   },
   "repository": {
@@ -29,6 +24,9 @@
     "url": "git://github.com/after-ephemera/oncall-slackbot.git"
   },
   "devDependencies": {
-    "bun-types": "^1.0.7"
+    "bun-types": "^1.0.7",
+    "@types/config": "^3.3.3",
+    "@types/debug": "^4.1.11",
+    "@types/jest": "^29.5.8"
   }
 }
