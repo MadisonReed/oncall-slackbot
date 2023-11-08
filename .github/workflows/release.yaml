@@ -4,8 +4,6 @@ name: Release new version
 on:
   workflow_dispatch:
 
-env:
-
 jobs:
   test:
     name: Run tests
