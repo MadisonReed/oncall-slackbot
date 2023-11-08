@@ -7,6 +7,12 @@ on:
   pull_request:
     branches: [ "master" ]
 
+env:
+  # Use docker.io for Docker Hub if empty
+  REGISTRY: docker.io
+  # github.repository as <account>/<repo>
+  IMAGE_NAME: iamjk/oncall-slackbot
+  
 jobs:
 
   build:
@@ -16,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag iamjk/oncall-slackbot
+      run: docker build . --file Dockerfile
   # test:
   #   runs-on: ubuntu-latest
   #   steps:
