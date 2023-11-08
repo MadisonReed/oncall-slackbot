@@ -18,14 +18,10 @@ jobs:
       - name: install deps
         run: bun i
       - name: install config
-        uses: ttd2089/secret-file-action@1.0.0
-        id: gpg-key-secret
-        with:
-          secret: ${{ secrets.DEFAULT_CONFIG }}
-          b64-decode: false
-          file: config/default.json
+        run: echo '${{ secrets.DEFAULT_CONFIG }}' > config/default.json
       - name: run tests
-        run: bun test
+        run: |
+          bun test
   create-gh-release:
     name: Create github release
     runs-on: ubuntu-latest
@@ -34,8 +30,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Get version
+        id: get_version
         run: |
           version=$(npm version --json | jq -r '."oncall-slackbot"')
+          echo "version=$version"
           echo "version=$version" >> $GITHUB_OUTPUT
       - name: Create Release
         id: create_release
@@ -43,7 +41,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.bump.outputs.version }}
-          release_name: ${{ steps.bump.outputs.version }}
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
