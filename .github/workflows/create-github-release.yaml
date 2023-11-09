@@ -1,7 +1,8 @@
 ---
-name: Release new version
+name: Release current version on Github
 
 on:
+  workflow_call:
   workflow_dispatch:
 
 jobs:

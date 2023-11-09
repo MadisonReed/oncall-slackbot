@@ -1,0 +1,16 @@
+---
+name: Bump NPM version, create Github release, and push to Dockerhub
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: bump npm version
+        uses: ./.github/workflows/bump-npm-version.yaml
+      - name: create gh release
+        uses: ./.github/workflows/create-github-release.yaml
+      - name: push to dockerhub
+        uses: ./.github/workflows/build-and-push-docker-image.yaml
