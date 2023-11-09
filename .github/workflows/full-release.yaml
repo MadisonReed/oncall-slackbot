@@ -8,6 +8,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - name: bump npm version
         uses: ./.github/workflows/bump-npm-version.yaml
       - name: create gh release
