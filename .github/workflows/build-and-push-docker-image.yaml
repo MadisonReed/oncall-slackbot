@@ -31,6 +31,7 @@ jobs:
   #       run: docker run iamjk/oncall-slackbot
   push_to_registry:
     name: Push image to DockerHub
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
