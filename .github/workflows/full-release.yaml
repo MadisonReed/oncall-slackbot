@@ -7,6 +7,8 @@ on:
 jobs:
   bump-npm:
     name: bump npm version
+    secrets:
+      GH_PAT: ${{ secrets.GH_PAT }}
     uses: ./.github/workflows/bump-npm-version.yaml
   gh-release:
     name: create gh release
