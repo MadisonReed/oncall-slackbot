@@ -9,10 +9,6 @@ on:
       DOCKER_PASSWORD:
         required: true
   workflow_dispatch:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
   release:
     types: [published]
 
