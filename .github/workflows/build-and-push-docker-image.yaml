@@ -51,4 +51,3 @@ jobs:
           context: "{{defaultContext}}"
           push: true
           tags: ${{ steps.get_version.outputs.version }}
-          labels: ${{ steps.meta.outputs.labels }}
