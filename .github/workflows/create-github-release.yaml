@@ -3,6 +3,9 @@ name: Release current version on Github
 
 on:
   workflow_call:
+    secrets:
+      DEFAULT_CONFIG:
+        required: true
   workflow_dispatch:
 
 jobs:

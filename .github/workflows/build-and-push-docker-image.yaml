@@ -3,6 +3,11 @@ name: Docker Image CI
 
 on:
   workflow_call:
+    secrets:
+      DOCKER_USERNAME:
+        required: true
+      DOCKER_PASSWORD:
+        required: true
   workflow_dispatch:
   push:
     branches: [master]

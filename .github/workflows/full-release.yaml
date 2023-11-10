@@ -12,9 +12,14 @@ jobs:
     uses: ./.github/workflows/bump-npm-version.yaml
   gh-release:
     name: create gh release
+    secrets:
+      DEFAULT_CONFIG: ${{ secrets.DEFAULT_CONFIG }}
     needs: bump-npm
     uses: ./.github/workflows/create-github-release.yaml
   dh-push:
     name: push to dockerhub
+    secrets:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
     needs: gh-release
     uses: ./.github/workflows/build-and-push-docker-image.yaml
