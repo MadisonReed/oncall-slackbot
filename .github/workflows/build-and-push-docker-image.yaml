@@ -25,12 +25,6 @@ jobs:
       - uses: actions/checkout@v3
       - name: Build the Docker image
         run: docker build . --file Dockerfile
-  # test:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - name: Test that the Docker image runs
-  #       run: docker run iamjk/oncall-slackbot
   push_to_registry:
     name: Push image to DockerHub
     needs: build
@@ -45,19 +39,16 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=ref,event=pr
-            type=sha
+      - name: Get version
+        id: get_version
+        run: |
+          version=$(npm version --json | jq -r '."oncall-slackbot"')
+          echo "version=$version"
+          echo "version=$version" >> $GITHUB_OUTPUT
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
         with:
           context: "{{defaultContext}}"
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.get_version.outputs.version }}
           labels: ${{ steps.meta.outputs.labels }}
