@@ -2,7 +2,7 @@
   "author": "Jk Jensen <azjkjensen@gmail.com>",
   "name": "oncall-slackbot",
   "description": "Pager Duty #slack bot",
-  "version": "0.3.12",
+  "version": "0.3.13",
   "private": true,
   "type": "module",
   "scripts": {
