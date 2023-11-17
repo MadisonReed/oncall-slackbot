@@ -14,3 +14,4 @@ test('pd api works', async ()=>{
   const oncalls = await pagerDuty.getOnCalls(null); 
   expect(oncalls).toBeDefined();
 });
+

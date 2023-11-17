@@ -42,3 +42,4 @@ export const handleVersionCmd = (bot, channel, user, message) => {
   }
   return false;
 };
+

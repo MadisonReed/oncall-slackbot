@@ -1,5 +1,5 @@
 ---
-name: Docker Image CI
+name: Push new Docker Image Version
 
 on:
   workflow_call:
