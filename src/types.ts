@@ -8,6 +8,7 @@ export interface BotConfig extends IConfig{
     cache_interval_seconds: number;
     next_in_queue_interval: number;
     test_user: string;
+    allowed_response_bots: string[];
   };
   pagerduty: {
     schedule_ids: string[];

@@ -1,15 +1,16 @@
 {
-  "slack" : {
-    "emoji" : ":pagerduty:",
-    "emoji_conversation" : ":pager: :poop:",
-    "welcome_message" : "OnCall Bot is alive.  TAG - you're it!",
-    "slack_token" : "",
-    "bot_name" : "OnCall Bot",
+  "slack": {
+    "emoji": ":pagerduty:",
+    "emoji_conversation": ":pager: :poop:",
+    "welcome_message": "OnCall Bot is alive.  TAG - you're it!",
+    "slack_token": "",
+    "bot_name": "OnCall Bot",
     "cache_interval_seconds": 3600,
     "next_in_queue_interval": 60,
-    "test_user": ""
+    "test_user": "",
+    "allowed_response_bots": ["bot_id"]
   },
-  "pagerduty" : {
+  "pagerduty": {
     "pagerduty_token": "",
     "cache_interval_seconds": 300,
     "oncall_map": {

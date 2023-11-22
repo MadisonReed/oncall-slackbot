@@ -18,7 +18,11 @@ const scheduleIdFromMessage = (message) => {
     return oncallRe.exec(message);
   });
   // get the full name from that
-  const fullname = oncallMap[oncallMentioned];
+  debug("oncall mentioned id", oncallMentioned);
+  let fullname = oncallMap[oncallMentioned];
+  if (!fullname) {
+    fullname = Object.keys(oncallMap)[oncallMentioned];
+  }
   debug("oncall mentioned was", fullname);
   return fullname;
 };

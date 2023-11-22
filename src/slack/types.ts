@@ -59,6 +59,7 @@ export interface MessageData {
   user: SlackUser | string;
   message: MessageDataDetails;
   text: string;
+  blocks: any;
   bot_id: string;
   channel: string;
   team: string;

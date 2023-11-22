@@ -21,9 +21,7 @@ import SlackData, {
 } from "./slack/data.ts";
 import { handleOncallMention } from "./slack/message.ts";
 
-const FORBIDDEN_MESSAGES = [
-  "has joined the channel",
-]
+const FORBIDDEN_MESSAGES = ["has joined the channel"];
 
 const debug = dbg("oncall_bot");
 const config: BotConfig = jsonConfig as BotConfig;
@@ -174,8 +172,13 @@ const handleMessage = (message_data: MessageData) => {
     return;
   }
   var isBot = message_data.bot_id != undefined;
-  if (isBot) {
-    // don't handle bot-bot communication or messages coming from this bot
+  debug("message:", message_data);
+  if (
+    isBot &&
+    !config.slack.allowed_response_bots.includes(message_data.bot_id)
+  ) {
+    // don't handle bot-bot communication or messages coming from this bot unless
+    // it is from an explicitly allowed bot
     debug("bot message, skipping");
     return;
   }
@@ -208,6 +211,9 @@ const handleChannelMessage = async (
   message_data: MessageData
 ) => {
   let message: string = message_data.text ? message_data.text.trim() : "";
+  if (message_data.blocks) {
+    message += " " + JSON.stringify(message_data.blocks);
+  }
   debug(channel);
   debug("message", message_data);
 
@@ -231,7 +237,9 @@ const handleBotCommands = (
 
     // If the message contains any forbidden text, skip it
     if (FORBIDDEN_MESSAGES.some((m) => message.includes(m))) {
-      debug(`forbidden message in channel ${channel.name} and message ${message}, skipping`);
+      debug(
+        `forbidden message in channel ${channel.name} and message ${message}, skipping`
+      );
       return;
     }
 
