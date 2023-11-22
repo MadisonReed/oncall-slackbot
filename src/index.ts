@@ -21,6 +21,10 @@ import SlackData, {
 } from "./slack/data.ts";
 import { handleOncallMention } from "./slack/message.ts";
 
+const FORBIDDEN_MESSAGES = [
+  "has joined the channel",
+]
+
 const debug = dbg("oncall_bot");
 const config: BotConfig = jsonConfig as BotConfig;
 
@@ -224,14 +228,24 @@ const handleBotCommands = (
   var message = message_data.text ? message_data.text.trim() : "";
   if (channel) {
     debug("channel", channel);
+
+    // If the message contains any forbidden text, skip it
+    if (FORBIDDEN_MESSAGES.some((m) => message.includes(m))) {
+      debug(`forbidden message in channel ${channel.name} and message ${message}, skipping`);
+      return;
+    }
+
     if (handleVersionCmd(bot, message_data.channel, null, message)) {
       debug("version cmd");
     } else if (message.match(new RegExp("^" + bot_tag() + ":? who$"))) {
       debug("who command");
       // who command
       postMessage(message_data.channel, "are the humans OnCall.", false);
-    } else if (message.match(new RegExp("^" + bot_tag() + ":?$"))) {
+    } else if (
       // need to support mobile which adds : after a mention
+      message.match(new RegExp("^" + bot_tag() + ":?$"))
+    ) {
+      // This is an explicit mention of the bot only.
       mentionOnCalls(channel.name, "get in here! :point_up_2:");
     } else {
       // default
