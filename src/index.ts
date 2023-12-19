@@ -13,6 +13,7 @@ import PagerDuty, { PdOncallResult } from "./pagerduty.ts";
 import { BotConfig, OncallSlackUser } from "./types.ts";
 import { bot, bot_tag } from "./slack/bot.ts";
 import { handleVersionCmd } from "./version.ts";
+import { handleLsCmd } from "./ls.ts";
 import { SlackChannel, MessageData } from "./slack/types.ts";
 import SlackData, {
   SlackUser,
@@ -160,11 +161,11 @@ bot.on("start", () => {
   getOncallSlackers();
 });
 
-bot.on("message", (data: MessageData) => {
-  handleMessage(data);
+bot.on("message", async (data: MessageData) => {
+  await handleMessage(data);
 });
 
-const handleMessage = (message_data: MessageData) => {
+const handleMessage = async (message_data: MessageData) => {
   // subscription for all incoming events https://api.slack.com/rtm
   //
   if (message_data.type != "message") {
@@ -188,22 +189,21 @@ const handleMessage = (message_data: MessageData) => {
   var message = message_data.text ? message_data.text.trim() : "";
   var botTagIndex = message.indexOf(bot_tag());
 
-  slackdata.getChannel(message_data.channel, (channel: SlackChannel) => {
-    debug("got channel", channel);
-    // handle non-DM channel interaction
-    if (botTagIndex >= 0) {
-      // first handle mentions of the bot itself
-      // (bot commands)
-      handleBotCommands(channel, message_data);
-    } else if (channel) {
-      // handle non-mentions in channels with the bot
-      // including mentions of other oncalls
-      handleChannelMessage(channel, message_data);
-    } else {
-      // handle DMs with the bot
-      handleDm(message_data);
-    }
-  });
+  const channel = await slackdata.getChannel(message_data.channel);
+  debug("got channel", channel);
+  // handle non-DM channel interaction
+  if (botTagIndex >= 0) {
+    // first handle mentions of the bot itself
+    // (bot commands)
+    await handleBotCommands(channel, message_data);
+  } else if (channel) {
+    // handle non-mentions in channels with the bot
+    // including mentions of other oncalls
+    handleChannelMessage(channel, message_data);
+  } else {
+    // handle DMs with the bot
+    handleDm(message_data);
+  }
 };
 
 const handleChannelMessage = async (
@@ -226,7 +226,7 @@ const handleChannelMessage = async (
   );
 };
 
-const handleBotCommands = (
+const handleBotCommands = async (
   channel: SlackChannel,
   message_data: MessageData
 ) => {
@@ -243,8 +243,27 @@ const handleBotCommands = (
       return;
     }
 
-    if (handleVersionCmd(bot, message_data.channel, null, message)) {
+    if (
+      handleVersionCmd(
+        bot,
+        message_data.channel,
+        null,
+        message,
+        message_data.thread_ts || message_data.ts
+      )
+    ) {
       debug("version cmd");
+    } else if (
+      await handleLsCmd(
+        await getOncallSlackers(),
+        bot,
+        message_data.channel,
+        null,
+        message,
+        message_data.thread_ts || message_data.ts
+      )
+    ) {
+      debug("ls cmd");
     } else if (message.match(new RegExp("^" + bot_tag() + ":? who$"))) {
       debug("who command");
       // who command
@@ -253,9 +272,11 @@ const handleBotCommands = (
       // need to support mobile which adds : after a mention
       message.match(new RegExp("^" + bot_tag() + ":?$"))
     ) {
+      debug("bot mention only");
       // This is an explicit mention of the bot only.
       mentionOnCalls(channel.name, "get in here! :point_up_2:");
     } else {
+      debug("oncall tag mention");
       // default
       let preText =
         (message_data.user ? " <@" + message_data.user + ">" : bot_tag()) +

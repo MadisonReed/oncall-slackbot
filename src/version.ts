@@ -8,7 +8,13 @@ const debug = dbg("version");
 const iconEmoji = config.get("slack.emoji");
 import { DEBUG_RUN } from "./index.ts";
 
-export const handleVersionCmd = (bot, channel, user, message) => {
+export const handleVersionCmd = (
+  bot,
+  channel,
+  user,
+  message,
+  threadTs: string
+) => {
   const VERSION_REGEX = new RegExp(`^(${bot_tag()}:? )?version$`);
   if (message.match(VERSION_REGEX)) {
     debug("version matched");
@@ -20,7 +26,9 @@ export const handleVersionCmd = (bot, channel, user, message) => {
       bot.postMessage(
         channel,
         "I am *" + pjson.name + "* and running version " + pjson.version + ".",
-        false
+        {
+          thread_ts: threadTs,
+        }
       );
     } else {
       debug("posting version to user");
@@ -42,4 +50,3 @@ export const handleVersionCmd = (bot, channel, user, message) => {
   }
   return false;
 };
-
