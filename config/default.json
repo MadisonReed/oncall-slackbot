@@ -1,0 +1,52 @@
+{
+  "slack": {
+    "emoji": ":pager:",
+    "slack_token": "xoxb-2426087588661-6064666115140-LIjVVwVzjC3WHAxBSkPngS7b",
+    "bot_name": "oncall-bot",
+    "cache_interval_seconds": 3600,
+    "next_in_queue_interval": 60,
+    "test_user": "",
+    "allowed_response_bots": ["B03GR70RACC"]
+  },
+  "pagerduty": {
+    "pagerduty_token": "u+ov1TVBoanXgPSHDXxg",
+    "cache_interval_seconds": 300,
+    "oncall_map": {
+      "apps": "PW7M1B2",
+      "core": "PGCQ3YS",
+      "core-secondary": "P9UY8ZN",
+      "data-platform": "PNTMO0M",
+      "dataplatform": "PNTMO0M",
+      "devx-move": "P6GX9YZ",
+      "devx-programmability": "PGSBDNK",
+      "execution-layer": "P6GX9YZ",
+      "fe": "PW7M1B2",
+      "fe-apps": "PW7M1B2",
+      "frontend": "PW7M1B2",
+      "graphql": "PS9H48O",
+      "graphql-rpc": "PS9H48O",
+      "imoc": "PHNE1QW",
+      "indexer": "PNTMO0M",
+      "integrity": "PI48ZXR",
+      "move": "P6GX9YZ",
+      "p13y": "PGSBDNK",
+      "pe": "P0MR6F5",
+      "pe-foundation": "P0MR6F5",
+      "pe-sui": "PDOFNC8",
+      "peeswee": "PDOFNC8",
+      "pef": "P0MR6F5",
+      "pefoundation": "P0MR6F5",
+      "pesui": "PDOFNC8",
+      "programmability": "PGSBDNK",
+      "rpc-1.5": "PS9H48O",
+      "seceng": "P9P61Z4",
+      "secops": "PI48ZXR",
+      "security": "P9P61Z4",
+      "security-engineering": "P9P61Z4",
+      "security-operations": "PI48ZXR",
+      "sui-core": "PGCQ3YS",
+      "sui-core-primary": "PGCQ3YS",
+      "sui-core-secondary": "P9UY8ZN"
+    }
+  }
+}
