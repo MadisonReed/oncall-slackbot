@@ -21,6 +21,7 @@
         "object-curly-newline": "off",
         "camelcase": "off",
         "no-console": "off",
+        "quotes": "double",
         "import/extensions": [
             "error",
             "ignorePackages",

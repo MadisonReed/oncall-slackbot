@@ -1,5 +1,5 @@
 import { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
-import { version, name as packageName } from '../../package.json';
+import { version, name as packageName } from "../../package.json";
 
 const USER_MENTION_REGEX = "^<@U[A-Z0-9]{8,10}>";
 const VERSION_REGEX = new RegExp(USER_MENTION_REGEX + " version");
