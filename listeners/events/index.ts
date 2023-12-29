@@ -1,6 +1,6 @@
 import { App } from '@slack/bolt';
-import appHomeOpenedCallback from './app-home-opened.js';
-import appMentionedCallback from './app-mentioned.js';
+import appHomeOpenedCallback from './app-home-opened';
+import appMentionedCallback from './app-mentioned';
 
 const register = (app: App) => {
   app.event('app_home_opened', appHomeOpenedCallback);
