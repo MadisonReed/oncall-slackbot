@@ -5,6 +5,7 @@ import events from './events/index';
 import messages from './messages/index';
 import shortcuts from './shortcuts/index';
 import views from './views/index';
+import pd from './pd/index';
 
 const registerListeners = (app: App) => {
   actions.register(app);
@@ -13,6 +14,7 @@ const registerListeners = (app: App) => {
   messages.register(app);
   shortcuts.register(app);
   views.register(app);
+  pd.register(app);
 };
 
 export default registerListeners;
