@@ -1,7 +1,7 @@
 {
   "slack": {
     "emoji": ":pager:",
-    "slack_token": "xoxb-2426087588661-6064666115140-LIjVVwVzjC3WHAxBSkPngS7b",
+    "slack_token": "xoxb-2426087588661-6064666115140-ycVooDAf3R0ypucAVJTYzirY",
     "bot_name": "oncall-bot",
     "cache_interval_seconds": 3600,
     "next_in_queue_interval": 60,

@@ -1,66 +1,82 @@
-// import { constructMappedMessage } from "../pd/ls";
+import { Member } from "@api/slack";
+import { BotConfig } from "@types";
+import SlackApi from "@api/slack";
 import { pagerDuty } from "@api/pd";
 import { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 import { version, name as packageName } from "package.json";
-import { OncallSlackUser, PdOncallResult } from "@types";
+import { Email, PdOncallResult, SlackUser } from "@types";
+import { OncallSlackUser } from "@api/slack";
+import jsonConfig from "config";
+
+const config: BotConfig = jsonConfig as BotConfig;
 
 const USER_MENTION_REGEX = "^<@U[A-Z0-9]{8,10}>";
 const VERSION_REGEX = new RegExp(`${USER_MENTION_REGEX} version`);
 const LS_REGEX = new RegExp(`${USER_MENTION_REGEX} ls`);
 
-// const getOncallSlackers = async () => {
-//   var oncallSlackers: OncallSlackUser[] = [];
-//   var oncallSlackerNames: string[] = [];
-//   const pdUsers: PdOncallResult[] = await pagerDuty.getOnCalls(null);
-//   for (const pdUser of pdUsers) {
-//     const slackUser: SlackUser = await slackdata.getUser(
-//       FIND_BY_EMAIL,
-//       pdUser.user.email
-//     );
-//     oncallSlackers.push(
-//       new OncallSlackUser(
-//         pdUser.user.name,
-//         pdUser.user.email,
-//         pdUser.user.id,
-//         pdUser.schedule.id,
-//         slackUser.id
-//       )
-//     );
-//     oncallSlackerNames.push(slackUser.name);
-//   }
-//   return oncallSlackers;
-// };
+type OncallMap = { [key: string]: string };
+const oncallMap: OncallMap = config.pagerduty.oncall_map;
 
-// const getOncallSlackers = async () => {
-//   var oncallSlackers: OncallSlackUser[] = [];
-//   var oncallSlackerNames: string[] = [];
-//   const pdUsers: PdOncallResult[] = await pagerDuty.getOnCalls(null);
-//   for (const pdUser of pdUsers) {
-//     if (pdUser.user.name == undefined) {
-//       console.error("...", pdUser);
-//     } else {
-//       const slackUser: SlackUser = await slackdata.getUser(
-//         FIND_BY_EMAIL,
-//         pdUser.user.email
-//       );
-//       if (!slackUser) {
-//         console.error("user doesn't have a slack id");
-//       } else {
-//         oncallSlackers.push(
-//           new OncallSlackUser(
-//             pdUser.user.name,
-//             pdUser.user.email,
-//             pdUser.user.id,
-//             pdUser.schedule.id,
-//             slackUser.id
-//           )
-//         );
-//         oncallSlackerNames.push(slackUser.name);
-//       }
-//     }
-//   }
-//   return oncallSlackers;
-// };
+const transformMapping = (mapping: OncallMap) => {
+  // Given the regular oncall mapping, transform it into a
+  // mapping of schedule id to a list of shortnames.
+  const transformed: {
+    [key: string]: string[];
+  } = {};
+
+  for (const name in mapping) {
+    const id = mapping[name];
+    if (transformed[id]) {
+      transformed[id].push(name);
+    } else {
+      transformed[id] = [name];
+    }
+  }
+
+  return transformed;
+};
+
+const constructMappedMessage = (oncallSlackMembers: OncallSlackUser[]) => {
+  const shortnamesMap = transformMapping(oncallMap);
+  return (
+    Object.entries(shortnamesMap)
+      .map(([pdScheduleId, shortnames]) => [
+        shortnames,
+        oncallSlackMembers.find((s) => s.pdScheduleId == pdScheduleId),
+      ])
+      // remove null and undefined
+      .filter(([_, id]: (string[] | OncallSlackUser | undefined)[]) => !!id)
+      .map(
+        ([shortnames, s]: (string[] | OncallSlackUser | undefined)[]) =>
+          `(${(shortnames! as string[]).join(" | ")}): @${
+            (s as OncallSlackUser).name
+          }`
+      )
+      .join("\n")
+  );
+};
+
+const getOncallSlackMembers = async (): Promise<OncallSlackUser[]> => {
+  var oncallSlackMembers: OncallSlackUser[] = [];
+  var oncallSlackerNames: string[] = [];
+  const pdUsers: PdOncallResult[] = await pagerDuty.getOncalls(null);
+  const slack = new SlackApi();
+  for (const pdUser of pdUsers) {
+    const slackUser: Member = await slack.getUser(pdUser.user.email as Email);
+    console.log("slackUser", slackUser);
+    oncallSlackMembers.push(
+      new OncallSlackUser(
+        pdUser.user.name,
+        pdUser.user.email,
+        pdUser.user.id,
+        pdUser.schedule.id,
+        slackUser.id!
+      )
+    );
+    oncallSlackerNames.push(slackUser.name!);
+  }
+  return oncallSlackMembers;
+};
 
 const appMentionedCallback = async ({
   event,
@@ -70,9 +86,13 @@ const appMentionedCallback = async ({
   if (event.text.match(VERSION_REGEX)) {
     say(`I am *${packageName}* and running version ${version}.`);
   } else if (event.text.match(LS_REGEX)) {
-    // const usersMessage = constructMappedMessage(await getOncallSlackers());
-    const usersMessage = JSON.stringify((await pagerDuty.getOncalls(null)).map((x) => x.user.name));
-    say(`Current oncall listing: ${usersMessage}`);
+    const slackMembers = await getOncallSlackMembers();
+    const usersMessage = constructMappedMessage(slackMembers);
+    let threadTs = event.ts;
+    await say({
+      text: `Current oncall listing:\n ${usersMessage}`,
+      thread_ts: threadTs,
+    });
   } else {
     say("hey");
   }

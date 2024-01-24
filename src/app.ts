@@ -1,6 +1,8 @@
-import { App, LogLevel } from '@slack/bolt';
-import * as dotenv from 'dotenv';
-import registerListeners from './listeners';
+import { App, LogLevel } from "@slack/bolt";
+import * as dotenv from "dotenv";
+import registerListeners from "./listeners";
+import  SlackApi  from "@api/slack";
+import { Email } from "@types";
 
 dotenv.config();
 
@@ -19,8 +21,11 @@ registerListeners(app);
 (async () => {
   try {
     await app.start(process.env.PORT || 3000);
-    console.log('⚡️ Bolt app is running! ⚡️');
+    console.log("⚡️ Bolt app is running! ⚡️");
+
   } catch (error) {
-    console.error('Unable to start App', error);
+    console.error("Unable to start App", error);
   }
 })();
+
+export default app;

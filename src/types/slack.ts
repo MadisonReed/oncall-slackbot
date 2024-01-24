@@ -1,5 +1,7 @@
 import { IConfig } from "config";
 
+export type Email = string;
+
 export interface BotConfig extends IConfig {
   slack: {
     emoji: string;
@@ -18,24 +20,7 @@ export interface BotConfig extends IConfig {
   };
 }
 
-export class OncallSlackUser {
+export interface SlackUser {
+  id: string;
   name: string;
-  email: string;
-  pdId: string;
-  pdScheduleId: string;
-  slackId: string;
-
-  constructor(
-    name: string,
-    email: string,
-    pdId: string,
-    pdScheduleId: string,
-    slackId: string
-  ) {
-    this.name = name;
-    this.email = email;
-    this.pdId = pdId;
-    this.pdScheduleId = pdScheduleId;
-    this.slackId = slackId;
-  }
 }

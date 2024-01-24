@@ -1,4 +1,5 @@
-import { BotConfig, OncallSlackUser } from "../../types";
+import { BotConfig } from "@types";
+import { OncallSlackUser } from "@api/slack";
 import jsonConfig from "config";
 
 const config: BotConfig = jsonConfig as BotConfig;

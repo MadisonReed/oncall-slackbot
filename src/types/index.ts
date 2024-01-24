@@ -1,2 +1,2 @@
 export type { PdUser, PdSchedule, PdOncallResult } from "./pd";
-export type { BotConfig, OncallSlackUser } from "./slack";
+export type { BotConfig,  SlackUser, Email } from "./slack";
