@@ -1,5 +1,9 @@
 import querystring from "querystring";
+import { BotConfig } from "../../types";
 import NodeCache from "node-cache";
+import jsonConfig from "config";
+
+const config: BotConfig = jsonConfig as BotConfig;
 
 type OncallsParams = {
   time_zone: string;
@@ -145,4 +149,5 @@ class PagerDuty {
   }
 }
 
-export default PagerDuty;
+const pagerDuty :PagerDuty= new PagerDuty(config.get("pagerduty"));
+export default pagerDuty;

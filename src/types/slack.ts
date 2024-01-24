@@ -1,6 +1,6 @@
-import {IConfig }from 'config';
+import { IConfig } from "config";
 
-export interface BotConfig extends IConfig{
+export interface BotConfig extends IConfig {
   slack: {
     emoji: string;
     slack_token: string;
