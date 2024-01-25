@@ -34,7 +34,7 @@
         "paths": {
           "@src*": ["./src", "src/*"],
           "@types*": ["./src/types", "src/types/*"], 
-          "@api*": ["src/api", "./src/api/*"],
+          "@api*": ["./src/api", "./src/api/*"],
           "package.json": ["package.json"]
         },                                      /* Specify a set of entries that re-map imports to additional lookup locations. */
         // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */

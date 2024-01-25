@@ -3,12 +3,15 @@ import { OncallSlackUser } from "@api/slack";
 import jsonConfig from "config";
 
 const config: BotConfig = jsonConfig as BotConfig;
-const oncallMap = config.pagerduty.oncall_map;
+type OncallMap = { [key: string]: string };
+const oncallMap:OncallMap = config.pagerduty.oncall_map;
 
-const transformMapping = (mapping: any) => {
+const transformMapping = (mapping: OncallMap) => {
   // Given the regular oncall mapping, transform it into a
   // mapping of schedule id to a list of shortnames.
-  const transformed: { [id: string]: string[] } = {};
+  const transformed: {
+    [key: string]: string[];
+  } = {};
 
   for (const name in mapping) {
     const id = mapping[name];
@@ -22,32 +25,23 @@ const transformMapping = (mapping: any) => {
   return transformed;
 };
 
-export const constructMappedMessage = (
-  oncallSlackers: OncallSlackUser[]
-): string => {
+export const makeOncallMappingMessage = (oncallSlackMembers: OncallSlackUser[]) => {
   const shortnamesMap = transformMapping(oncallMap);
-  const entries: Array<[string, string[]]> = Object.entries(shortnamesMap);
   return (
-    entries
-      .map(
-        ([pdScheduleId, shortnames]): [
-          string[],
-          OncallSlackUser | undefined
-        ] => [
-          shortnames,
-          oncallSlackers.find((s) => s.pdScheduleId == pdScheduleId),
-        ]
-      )
+    Object.entries(shortnamesMap)
+      .map(([pdScheduleId, shortnames]) => [
+        shortnames,
+        oncallSlackMembers.find((s) => s.pdScheduleId == pdScheduleId),
+      ])
       // remove null and undefined
-      .filter(
-        ([_, slack_user]: [string[], OncallSlackUser | undefined]) => !!slack_user
-      )
+      .filter(([_, id]: (string[] | OncallSlackUser | undefined)[]) => !!id)
       .map(
-        ([shortnames, slack_user]) =>
-          `(${shortnames.join(" | ")}): @${
-            (slack_user as OncallSlackUser).name
+        ([shortnames, s]: (string[] | OncallSlackUser | undefined)[]) =>
+          `(${(shortnames! as string[]).join(" | ")}): @${
+            (s as OncallSlackUser).name
           }`
       )
       .join("\n")
   );
 };
+
