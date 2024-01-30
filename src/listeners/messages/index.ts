@@ -1,10 +1,11 @@
 import { App } from '@slack/bolt';
-import sampleMessageCallback from './sample-message';
 import oncallMentionedCallback from './oncall-mentioned';
+import { oncallMap } from '@api/pd';
 
 const register = (app: App) => {
-  app.message(/^(hi|hello|hey).*/, sampleMessageCallback);
-  app.message(/^(hi|hello|hey).*/, oncallMentionedCallback);
+  const allShortnamesRegex = new RegExp(`.*@(${Object.keys(oncallMap).join('|')}).*`);
+  console.log("allShortnamesRegex", allShortnamesRegex);
+  app.message(allShortnamesRegex, oncallMentionedCallback);
 };
 
 export default { register };

@@ -4,7 +4,7 @@ import jsonConfig from "config";
 
 const config: BotConfig = jsonConfig as BotConfig;
 type OncallMap = { [key: string]: string };
-const oncallMap:OncallMap = config.pagerduty.oncall_map;
+export const oncallMap:OncallMap = config.pagerduty.oncall_map;
 
 const transformMapping = (mapping: OncallMap) => {
   // Given the regular oncall mapping, transform it into a

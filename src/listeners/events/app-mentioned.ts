@@ -25,7 +25,11 @@ const appMentionedCallback = async ({
       thread_ts: threadTs,
     });
   } else {
-    say("hey");
+    // list available commands
+    say({
+      text: "You can @ me with the following commands:\n- version\n- ls",
+      thread_ts: threadTs,
+    });
   }
 };
 

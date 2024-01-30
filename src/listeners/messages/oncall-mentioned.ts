@@ -1,9 +1,13 @@
-import { AllMiddlewareArgs, SlackEventMiddlewareArgs } from '@slack/bolt';
+import { AllMiddlewareArgs, SlackEventMiddlewareArgs } from "@slack/bolt";
 
-const oncallMentionedCallback = async ({ context, say }: AllMiddlewareArgs & SlackEventMiddlewareArgs<'message'>) => {
+const oncallMentionedCallback = async ({
+  context,
+  event,
+  say,
+}: AllMiddlewareArgs & SlackEventMiddlewareArgs<"message">) => {
   try {
     const greeting = context.matches[0];
-    await say(`${greeting}, how are you?`);
+    await say({ text: `matched ${greeting}`, thread_ts: event.ts });
   } catch (error) {
     console.error(error);
   }
