@@ -143,11 +143,11 @@ class PagerDuty {
     let oncalls = this.cache.get(options.contentIndex);
     if (oncalls == undefined) {
       oncalls = this.getAllPaginatedData(options);
+      this.cache.set(options.contentIndex, oncalls, this.cacheInterval);
     }
-    this.cache.set(options.contentIndex, oncalls, this.cacheInterval);
     return oncalls as PdOncallResult[];
   }
 }
 
-const pagerDuty :PagerDuty= new PagerDuty(config.get("pagerduty"));
+const pagerDuty: PagerDuty = new PagerDuty(config.get("pagerduty"));
 export default pagerDuty;

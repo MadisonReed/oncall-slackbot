@@ -1,2 +1,5 @@
-export { default as pagerDuty } from "./pagerduty";
+import pagerDuty from "./pagerduty";
+
+export { PdOncallResult } from "./pagerduty";
 export { makeOncallMappingMessage, oncallMap } from "./ls";
+export default pagerDuty;

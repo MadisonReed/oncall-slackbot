@@ -11,7 +11,8 @@ const appMentionedCallback = async ({
   event,
   say,
 }: AllMiddlewareArgs & SlackEventMiddlewareArgs<"app_mention">) => {
-  let threadTs = event.ts;
+  console.log("**** bot mentioned");
+  const threadTs = event.ts;
   if (event.text.match(VERSION_REGEX)) {
     await say({
       text: `I am *${packageName}* and running version ${version}.`,

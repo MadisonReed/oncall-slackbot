@@ -53,7 +53,6 @@ export default class SlackApi {
         limit: 1000,
       })
       .then((result) => {
-        console.log("all users: ", result.members?.length);
         return result;
       });
     this.cache.set("allUsers", usersResult, this.cacheInterval);

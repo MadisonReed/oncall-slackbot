@@ -1,8 +1,6 @@
 import { App, LogLevel } from "@slack/bolt";
 import * as dotenv from "dotenv";
 import registerListeners from "./listeners";
-import  SlackApi  from "@api/slack";
-import { Email } from "@types";
 
 dotenv.config();
 

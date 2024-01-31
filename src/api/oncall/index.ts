@@ -2,7 +2,7 @@ import { Member } from "@api/slack";
 import { OncallSlackUser } from "@api/slack";
 import SlackApi from "@api/slack";
 import { Email, PdOncallResult } from "@types";
-import { pagerDuty } from "@api/pd";
+import pagerDuty from "@api/pd";
 
 export const getOncallSlackMembers = async (): Promise<OncallSlackUser[]> => {
   var oncallSlackMembers: OncallSlackUser[] = [];
