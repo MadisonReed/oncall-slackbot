@@ -11,7 +11,6 @@ export const getOncallSlackMembers = async (): Promise<OncallSlackUser[]> => {
   const slack = new SlackApi();
   for (const pdUser of pdUsers) {
     const slackUser: Member = await slack.getUser(pdUser.user.email as Email);
-    console.log("slackUser", slackUser);
     oncallSlackMembers.push(
       new OncallSlackUser(
         pdUser.user.name,
