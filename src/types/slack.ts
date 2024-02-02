@@ -5,7 +5,6 @@ export type Email = string;
 export interface BotConfig extends IConfig {
   slack: {
     emoji: string;
-    slack_token: string;
     bot_name: string;
     cache_interval_seconds: number;
     next_in_queue_interval: number;

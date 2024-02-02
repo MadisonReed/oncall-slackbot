@@ -11,7 +11,6 @@ WORKDIR /slackbot
 COPY package.json ./
 COPY dist/ ./dist/
 COPY --from=builder /slackbot/node_modules/ node_modules/
-COPY .env ./
 COPY config/ ./config/
 CMD ["node", "dist/src/app.js"]
 

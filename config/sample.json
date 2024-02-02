@@ -3,7 +3,6 @@
     "emoji": ":pagerduty:",
     "emoji_conversation": ":pager: :poop:",
     "welcome_message": "OnCall Bot is alive.  TAG - you're it!",
-    "slack_token": "",
     "bot_name": "OnCall Bot",
     "cache_interval_seconds": 3600,
     "next_in_queue_interval": 60,

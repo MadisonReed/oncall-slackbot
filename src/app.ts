@@ -1,6 +1,10 @@
 import { App, LogLevel } from "@slack/bolt";
 import * as dotenv from "dotenv";
+import jsonConfig from "config";
+import { BotConfig } from "@types";
 import registerListeners from "./listeners";
+
+const config: BotConfig = jsonConfig as BotConfig;
 
 dotenv.config();
 
@@ -20,7 +24,6 @@ registerListeners(app);
   try {
     await app.start(process.env.PORT || 3000);
     console.log("⚡️ Bolt app is running! ⚡️");
-
   } catch (error) {
     console.error("Unable to start App", error);
   }

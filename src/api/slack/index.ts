@@ -49,7 +49,6 @@ export default class SlackApi {
     }
     let usersResult = app.client.users
       .list({
-        token: config.slack.slack_token,
         limit: 1000,
       })
       .then((result) => {
